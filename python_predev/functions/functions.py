@@ -11,6 +11,7 @@ class Function(object):
         self.var_table = deepcopy(FunctionTemplate.var_table)
         self.dtt = deepcopy(FunctionTemplate.dtt)
         self.dtt_args = deepcopy(FunctionTemplate.dtt_args)
+        self.dtt_removed = []
 
         self.return_function = None
         self.vpc = 0

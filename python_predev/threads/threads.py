@@ -2,6 +2,7 @@ from random import randint
 import curses
 
 from functions import Function
+from bytecode import vm_SCHEDULE
 
 
 class Thread(object):
@@ -27,7 +28,7 @@ class Thread(object):
 
 
 class ThreadManager(object):
-    window_width = 65
+    window_width = 35
     window_height = 45
 
     def __init__(self, main_function):
@@ -37,8 +38,8 @@ class ThreadManager(object):
 
 
     def add(self, function, thread_name):
-        begin_x = (len(self.threads) % 3) * ThreadManager.window_width + 5
-        begin_y = (len(self.threads) // 3) * ThreadManager.window_height + 2
+        begin_x = (len(self.threads) % 5) * ThreadManager.window_width + 5
+        begin_y = (len(self.threads) // 5) * ThreadManager.window_height + 2
         thread = Thread(function, thread_name, begin_y, begin_x)
         self.threads.append(thread)
         thread.refresh()
@@ -58,7 +59,7 @@ class ThreadManager(object):
         self.current_thread.refresh()
 
     def start(self):
-        self.threads[0].run()
+        self.schedule()
 
     def next(self):
         current_thread_index = self.threads.index(self.current_thread)
@@ -67,14 +68,35 @@ class ThreadManager(object):
         self.current_thread.run()
 
     def schedule(self):
-        code_block_size = 4
         current_thread_index = self.threads.index(self.current_thread)
         cf = self.current_thread.current_function
-        cf.dtt.insert(min(len(cf.dtt)+1, cf.vpc+code_block_size), vm_SCHEDULE)
 
         current_thread_index = (current_thread_index + 1) % len(self.threads)
         self.current_thread = self.threads[current_thread_index]
         self.current_thread.run()
+
+    def insert_scheduler(self, function, position):
+        function.dtt_removed.append(cf.dtt[position])
+        function.dtt[position] = vm_SCHEDULE
+
+    def fifs(self):
+        pass
+
+    def round_robin(self):
+        code_block_size = 4
+        cf = self.current_thread.current_function
+        position = cf.vpc + code_block_size
+
+        while cf is not None:
+            if position >= len(cf.dtt):
+                cf = cf.return_function
+                position = cf.vpc + code_block_size
+                continue
+            insert_scheduler(cf, position)
+            position += code_block_size
+
+    def priority_based(self):
+        pass
 
     def exit(self):
         pass
