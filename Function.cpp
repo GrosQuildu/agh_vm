@@ -4,10 +4,12 @@
 
 #include "Function.h"
 #include "VM.h"
+#include "Exceptions.h"
 
 #include <boost/foreach.hpp>
 #include <boost/tokenizer.hpp>
 #include <iostream>
+#include <dirent.h>
 
 void vm_add() {
     auto cf = VM::getVM("").getCurrentFunction();
@@ -42,7 +44,7 @@ void vm_return() {
 
 
 
-
+static const std::string bytecodeExtension = ".pp";
 static std::map<dtt_type, std::string> bytecodeMapping = {
         {vm_add, "VM_DD"},
         {vm_print, "VM_PRINT"},
@@ -51,9 +53,6 @@ static std::map<dtt_type, std::string> bytecodeMapping = {
 
 
 
-
-
-std::map<std::string, FunctionPrototype*> FunctionFactory::functionsPrototypes;
 
 /**
  * Add function to FunctionFactory from file
@@ -74,7 +73,8 @@ void FunctionFactory::addFunction(std::string codePath) {
      * int[] - function's arguments table
      * map<string, int> - function's variables table
  */
-FunctionPrototype* FunctionFactory::parseCode(std::string) {
+FunctionPrototype* FunctionFactory::parseCode(std::string code) {
+
 
     std::string name = "MAIN";
 
@@ -109,10 +109,38 @@ FunctionPrototype* FunctionFactory::parseCode(std::string) {
     var_table["ZMIENNA1"] = 0;
 
 
-
     auto x = new FunctionPrototype(name, dtt, dtt_size, dtt_args, dtt_args_size, arg_table_size, var_table);
     return x;
 }
+
+void FunctionFactory::initialize(std::string codePath) {
+    DIR *dir;
+    struct dirent *ent;
+    if ((dir = opendir (codePath.c_str())) == NULL) {
+        throw ParserException("Path not found: " + codePath);
+
+    }
+
+    while ((ent = readdir (dir)) != NULL) {
+        std::string filename = ent->d_name;
+        // filename endswith ".pp"
+        if(filename.size() > bytecodeExtension.size() && !filename.compare(filename.size() - bytecodeExtension.size(),
+                                                                          bytecodeExtension.size(), bytecodeExtension)) {
+            this->addFunction(filename);
+        }
+    }
+    closedir (dir);
+}
+
+Function* FunctionFactory::makeFunction(std::string functionName) {
+    auto functionPrototype = FunctionFactory::functionsPrototypes[functionName];
+    return functionPrototype->generate();
+}
+
+bool FunctionFactory::haveFunction(std::string functionPrototypeName) {
+    return this->functionsPrototypes.find(functionPrototypeName) != this->functionsPrototypes.end();
+}
+
 
 FunctionPrototype::FunctionPrototype(std::string name, dtt_type* dtt, int dtt_size, dtt_arg* dtt_args, int dtt_args_size,
                                      int arg_table_size, std::map<std::string, int>var_table) {
@@ -128,12 +156,6 @@ FunctionPrototype::FunctionPrototype(std::string name, dtt_type* dtt, int dtt_si
 Function* FunctionPrototype::generate() {
     return new Function(*this);
 }
-
-Function* FunctionFactory::makeFunction(std::string functionName) {
-    auto functionPrototype = FunctionFactory::functionsPrototypes[functionName];
-    return functionPrototype->generate();
-}
-
 
 
 Function::Function(FunctionPrototype& functionPrototype) {

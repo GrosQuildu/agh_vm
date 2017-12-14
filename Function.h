@@ -25,6 +25,7 @@ void vm_add();
 void vm_print();
 void vm_return();
 
+
 class Function;
 
 class FunctionPrototype {
@@ -41,7 +42,6 @@ public:
     int arg_table_size = 0;
     std::map<std::string, int>var_table;
 };
-
 
 
 
@@ -68,17 +68,16 @@ public:
 
 
 
-
-
-
 class FunctionFactory {
 public:
-    static void addFunction(std::string);
-    static Function* makeFunction(std::string);
+    void initialize(std::string);
+    void addFunction(std::string);
+    bool haveFunction(std::string);
+    Function* makeFunction(std::string);
 
 private:
-    static std::map<std::string, FunctionPrototype*> functionsPrototypes;
-    static FunctionPrototype* parseCode(std::string);
+    std::map<std::string, FunctionPrototype*> functionsPrototypes;
+    FunctionPrototype* parseCode(std::string);
 };
 
 #endif //VM_FUNCTION_H

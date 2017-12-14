@@ -10,5 +10,5 @@ using namespace std;
 
 int main() {
     cout<<"Start\n";
-    VM::getVM("test").start();
+    VM::getVM("/home/gros/studia/eaiib_3/wzorce/virtual_machine/python_predev/example_program/").start();
 }
