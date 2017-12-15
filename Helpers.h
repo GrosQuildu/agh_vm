@@ -7,6 +7,8 @@
 
 #include <string>
 #include <algorithm>
+#include <set>
+#include <vector>
 
 bool startswith(std::string, std::string);
 bool endswith(std::string, std::string);
@@ -30,5 +32,7 @@ static inline void trim(std::string &s) {
     ltrim(s);
     rtrim(s);
 }
+
+std::string vector2string(std::vector<std::set<char>>);
 
 #endif //VM_HELPERS_H

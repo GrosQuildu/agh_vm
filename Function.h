@@ -14,12 +14,10 @@
 typedef void (* dtt_type)();
 
 typedef struct dtt_arg_type {
-    int type;
+    char type;
     int valInt;
     std::string valStr;
 } dtt_arg_type;
-
-
 
 const char VAR = 0;
 const char ARG = 1;
@@ -27,16 +25,43 @@ const char CONST = 2;
 const char FUNC = 3;
 const char THREAD = 4;
 
-void vm_add();
+const std::string const2str(char);
+
+void vm_assign();
 void vm_print();
+void vm_call();
 void vm_return();
+void vm_send();
+void vm_recv();
+void vm_start();
+void vm_join();
+void vm_stop();
+void vm_add();
+void vm_sub();
+void vm_div();
+void vm_mul();
+
 
 static const std::string bytecodeExtension = ".pp";
 static std::map<std::string, std::pair<dtt_type, std::vector<std::set<char>>>> bytecodeMapping = {
         // BYTECODE: (function, vector({arg1type | arg1type}, {arg2type}, {arg3type}))
-        {"ADD", {vm_add, { {VAR}, {VAR,CONST}, {VAR,CONST} }}},
-        {"PRINT", {vm_print, { {VAR,CONST} }}},
-        {"RETURN", {vm_return, { {VAR,CONST} }}},
+        {"DECLARE", {nullptr, { {VAR} }}},
+        {"ASSIGN", {vm_assign, { {VAR}, {VAR,CONST,ARG} }}},
+        {"PRINT", {vm_print, { {VAR,CONST,ARG} }}},
+
+        {"CALL", {vm_call, { {FUNC}, {VAR}, {} }}},
+        {"RETURN", {vm_return, { {VAR,CONST,ARG} }}},
+
+        {"SEND", {vm_send, { {THREAD}, {VAR,CONST,ARG} }}},
+        {"RECV", {vm_recv, { {VAR} }}},
+        {"START", {vm_start, { {FUNC}, {THREAD}, {} }}},
+        {"JOIN", {vm_join, { {THREAD} }}},
+        {"STOP", {vm_stop, { {THREAD} }}},
+
+        {"ADD", {vm_add, { {VAR}, {VAR,CONST,ARG}, {VAR,CONST,ARG} }}},
+        {"SUB", {vm_sub, { {VAR}, {VAR,CONST,ARG}, {VAR,CONST,ARG} }}},
+        {"DIV", {vm_div, { {VAR}, {VAR,CONST,ARG}, {VAR,CONST,ARG} }}},
+        {"MUL", {vm_mul, { {VAR}, {VAR,CONST,ARG}, {VAR,CONST,ARG} }}},
 };
 
 class Function;
@@ -44,7 +69,6 @@ class Function;
 class FunctionPrototype {
 public:
     FunctionPrototype(std::string, dtt_type[], int, dtt_arg_type[], int, int, std::map<std::string, int>);
-
     Function* generate();
 
     std::string name;
@@ -63,6 +87,7 @@ public:
     Function(FunctionPrototype&);
 
     void run();
+    dtt_arg_type& getNextArg();
     friend std::ostream& operator<<(std::ostream&, const Function&);
 
     std::string name;

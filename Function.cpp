@@ -13,11 +13,49 @@
 #include <fstream>
 #include <vector>
 
+const std::string const2str(char c) {
+    switch(c) {
+        case 0:
+            return "VAR";
+        case 1:
+            return "ARG";
+        case 2:
+            return "CONST";
+        case 3:
+            return "FUNC";
+        case 4:
+            return "THREAD";
+        default:
+            return "UNKNOWN";
+    }
+}
+
+void vm_assign(){};
+void vm_print() {
+    auto cf = VM::getVM("").getCurrentFunction();
+    auto arg0 = cf->getNextArg();
+
+    int val0 = arg0.valInt;
+    if(arg0.type == VAR)
+        val0 = cf->var_table[arg0.valStr];
+
+    std::cout << val0 << "\n";
+}
+
+void vm_call(){};
+void vm_return(){};
+
+void vm_send(){};
+void vm_recv(){};
+void vm_start(){};
+void vm_join(){};
+void vm_stop(){};
+
 void vm_add() {
     auto cf = VM::getVM("").getCurrentFunction();
-    auto arg0 = cf->dtt_args[cf->arg_c++];
-    auto arg1 = cf->dtt_args[cf->arg_c++];
-    auto arg2 = cf->dtt_args[cf->arg_c++];
+    auto arg0 = cf->getNextArg();
+    auto arg1 = cf->getNextArg();
+    auto arg2 = cf->getNextArg();
 
     int val1 = arg1.valInt;
     if(arg1.type == VAR)
@@ -29,20 +67,9 @@ void vm_add() {
 
     cf->var_table[arg0.valStr] = val1 + val2;
 }
-
-void vm_print() {
-    auto cf = VM::getVM("").getCurrentFunction();
-    auto arg0 = cf->dtt_args[cf->arg_c++];
-
-    int val0 = arg0.valInt;
-    if(arg0.type == VAR)
-        val0 = cf->var_table[arg0.valStr];
-
-    std::cout << val0 << "\n";
-}
-void vm_return() {
-    return;
-}
+void vm_sub(){};
+void vm_div(){};
+void vm_mul(){};
 
 
 
@@ -105,9 +132,23 @@ dtt_arg_type parse_load(std::string line, int arg_table_size, std::map<std::stri
 dtt_type parse_instruction(std::string line, std::vector<dtt_arg_type> &dtt_args_vector) {
     std::vector<std::set<char>> &required_args = bytecodeMapping.at(line).second;
     int counter = (int)dtt_args_vector.size() - 1;
-    for (auto &&required_arg : required_args) {
-        if(required_arg.find(dtt_args_vector.at(counter--).type) == required_arg.end())
-            throw ParserException("Wrong arguments (calls to LOADs) for " + line);
+    for(auto required_arg = required_args.rbegin(); required_arg != required_args.rend(); ++required_arg) {
+        // empty set -> unknown (at paring time) number of elements
+        if(required_arg->empty())
+            break;
+        if(required_arg->find(dtt_args_vector.at(counter--).type) == required_arg->end()) {
+            std::string err_msg = "Wrong arguments (calls to LOADs) for " + line + "\n";
+            err_msg += "Required: " + vector2string(required_args) + "\n";
+            err_msg += "Found: [";
+            for (int i = 0; i < required_args.size(); ++i) {
+                if(i + 1 <= dtt_args_vector.size())
+                    err_msg += const2str(dtt_args_vector.at(dtt_args_vector.size() - i - 1).type) + ", ";
+                else
+                    break;
+            }
+            err_msg += "]";
+            throw ParserException(err_msg);
+        }
     }
     return bytecodeMapping.at(line).first;
 }
@@ -160,8 +201,8 @@ FunctionPrototype* FunctionFactory::parseCode(std::string codePath) {
     while (std::getline(codeFile, line)) {
         trim(line);
         if(!line.empty() && !startswith(line, "//")) {
-            if(startswith(line, "DEFINE ")) {
-                var_name = line.substr(7);
+            if(startswith(line, "DECLARE ")) {
+                var_name = line.substr(8);
                 if(line.empty())
                     throw ParserException("VAR_NAME after DEFINE required");
                 var_table[var_name] = 0;
@@ -272,6 +313,10 @@ void Function::run() {
     std::cout << *this << std::endl;
     while(this->vpc < this->dtt_size)
         this->dtt[this->vpc++]();
+}
+
+dtt_arg_type& Function::getNextArg() {
+    return this->dtt_args[arg_c++];
 }
 
 std::ostream& operator<<(std::ostream& s, const Function& function)
