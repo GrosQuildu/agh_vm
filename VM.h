@@ -13,7 +13,7 @@ using std::set;
 
 class VM {
 public:
-    static VM& getVM(const std::string& codePath);
+    static VM& getVM(const std::string&);  // singleton
     static VM& getVM();
 
     void start();
@@ -21,8 +21,6 @@ public:
     Function *currentFunction_;
 
 private:
-//    VM(const std::string& codePath);
-//    VM(const VM & );
     static bool isInitialized;
     static FunctionFactory functionFactory;
 };

@@ -8,36 +8,49 @@
 #include <map>
 #include <string>
 #include <netinet/in.h>
+#include <vector>
+#include <set>
 
 typedef void (* dtt_type)();
 
-typedef struct dtt_arg {
+typedef struct dtt_arg_type {
     int type;
     int valInt;
     std::string valStr;
-} dtt_arg;
+} dtt_arg_type;
 
-const int VAR = 0;
-const int ARG = 1;
-const int CONST = 2;
+
+
+const char VAR = 0;
+const char ARG = 1;
+const char CONST = 2;
+const char FUNC = 3;
+const char THREAD = 4;
 
 void vm_add();
 void vm_print();
 void vm_return();
 
+static const std::string bytecodeExtension = ".pp";
+static std::map<std::string, std::pair<dtt_type, std::vector<std::set<char>>>> bytecodeMapping = {
+        // BYTECODE: (function, vector({arg1type | arg1type}, {arg2type}, {arg3type}))
+        {"ADD", {vm_add, { {VAR}, {VAR,CONST}, {VAR,CONST} }}},
+        {"PRINT", {vm_print, { {VAR,CONST} }}},
+        {"RETURN", {vm_return, { {VAR,CONST} }}},
+};
 
 class Function;
 
 class FunctionPrototype {
 public:
-    FunctionPrototype(std::string, dtt_type[], int, dtt_arg[], int, int, std::map<std::string, int>);
+    FunctionPrototype(std::string, dtt_type[], int, dtt_arg_type[], int, int, std::map<std::string, int>);
 
     Function* generate();
 
     std::string name;
     dtt_type *dtt = nullptr;
     int dtt_size = 0;
-    dtt_arg* dtt_args;
+    dtt_arg_type* dtt_args;
     int dtt_args_size = 0;
     int arg_table_size = 0;
     std::map<std::string, int>var_table;
@@ -55,7 +68,7 @@ public:
     std::string name;
     dtt_type *dtt = nullptr;
     int dtt_size = 0;
-    dtt_arg* dtt_args;
+    dtt_arg_type* dtt_args;
     int dtt_args_size = 0;
     int *arg_table;
     std::map<std::string, int>var_table;
@@ -73,7 +86,7 @@ public:
     void initialize(std::string);
     void addFunction(std::string);
     bool haveFunction(std::string);
-    Function* makeFunction(std::string);
+    Function* makeFunction(std::string);  // factory method
 
 private:
     std::map<std::string, FunctionPrototype*> functionsPrototypes;

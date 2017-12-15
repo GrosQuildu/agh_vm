@@ -14,9 +14,9 @@ bool VM::isInitialized = false;
 FunctionFactory VM::functionFactory;
 
 
-VM& VM::getVM(const std::string& codePath) {
+VM& VM::getVM(const std::string& codeDirPath) {
     if(!VM::isInitialized) {
-        VM::functionFactory.initialize(codePath);
+        VM::functionFactory.initialize(codeDirPath);
         VM::isInitialized = true;
     }
     static VM vm;
