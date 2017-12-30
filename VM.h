@@ -13,8 +13,16 @@ using std::set;
 
 class VM {
 public:
-    static VM& getVM(const std::string&);  // singleton
-    static VM& getVM();
+    /** Initialize virtual machine singleton
+     * @param string codePathDir
+     */
+    static void initialize(const std::string&);
+
+    /**
+     * Get virtual machine singleton instance
+     * @return VM&
+     */
+    static VM& getVM();  // singleton
 
     void start();
     Function* getCurrentFunction();

@@ -13,6 +13,7 @@
 #include <fstream>
 #include <vector>
 
+
 const std::string const2str(char c) {
     switch(c) {
         case 0:
@@ -30,9 +31,10 @@ const std::string const2str(char c) {
     }
 }
 
+
 void vm_assign(){};
 void vm_print() {
-    auto cf = VM::getVM("").getCurrentFunction();
+    auto cf = VM::getVM().getCurrentFunction();
     auto arg0 = cf->getNextArg();
 
     int val0 = arg0.valInt;
@@ -52,7 +54,7 @@ void vm_join(){};
 void vm_stop(){};
 
 void vm_add() {
-    auto cf = VM::getVM("").getCurrentFunction();
+    auto cf = VM::getVM().getCurrentFunction();
     auto arg0 = cf->getNextArg();
     auto arg1 = cf->getNextArg();
     auto arg2 = cf->getNextArg();
@@ -72,17 +74,13 @@ void vm_div(){};
 void vm_mul(){};
 
 
-
-/**
- * Add function to FunctionFactory from file
- * @param codePath
- */
 void FunctionFactory::addFunction(std::string codePath) {
     auto functionPrototype = parseCode(codePath);
     FunctionFactory::functionsPrototypes[functionPrototype->name] = functionPrototype;
 }
 
-dtt_arg_type parse_load(std::string line, int arg_table_size, std::map<std::string, int> &var_table) {
+
+dtt_arg_type FunctionFactory::parse_load(std::string line, int arg_table_size, std::map<std::string, int> &var_table) {
     std::string bytecode;
     std::string bytecode_arg;
     dtt_arg_type dtt_arg_tmp = dtt_arg_type();
@@ -129,14 +127,17 @@ dtt_arg_type parse_load(std::string line, int arg_table_size, std::map<std::stri
     return dtt_arg_tmp;
 }
 
-dtt_type parse_instruction(std::string line, std::vector<dtt_arg_type> &dtt_args_vector) {
+
+
+dtt_type FunctionFactory::parse_instruction(std::string line, std::vector<dtt_arg_type> &dtt_args_vector) {
     std::vector<std::set<char>> &required_args = bytecodeMapping.at(line).second;
     int counter = (int)dtt_args_vector.size() - 1;
-    for(auto required_arg = required_args.rbegin(); required_arg != required_args.rend(); ++required_arg) {
+
+    for(auto required_arg_tuple = required_args.rbegin(); required_arg_tuple != required_args.rend(); ++required_arg_tuple) {
         // empty set -> unknown (at paring time) number of elements
-        if(required_arg->empty())
+        if(required_arg_tuple->empty())
             break;
-        if(required_arg->find(dtt_args_vector.at(counter--).type) == required_arg->end()) {
+        if(required_arg_tuple->find(dtt_args_vector.at(counter--).type) == required_arg_tuple->end()) {
             std::string err_msg = "Wrong arguments (calls to LOADs) for " + line + "\n";
             err_msg += "Required: " + vector2string(required_args) + "\n";
             err_msg += "Found: [";
@@ -153,16 +154,6 @@ dtt_type parse_instruction(std::string line, std::vector<dtt_arg_type> &dtt_args
     return bytecodeMapping.at(line).first;
 }
 
-/**
- * Parse bytecode to FunctionPrototype
- * @param string - function's code to parse
- * @return
-     * string - function name
-     * dtt_type[] - dtt table (array of pointers to functions that gets void and returns void)
-     * dtt_arg[] - table of dtt_arg structs, arguments for functions stored in dtt table
-     * int[] - function's arguments table
-     * map<string, int> - function's variables table
- */
 FunctionPrototype* FunctionFactory::parseCode(std::string codePath) {
     bool endReached = false;
     std::string line;
@@ -269,16 +260,16 @@ void FunctionFactory::initialize(std::string codeDirPath) {
     closedir (dir);
 }
 
+
 Function* FunctionFactory::makeFunction(std::string functionName) {
     auto functionPrototype = FunctionFactory::functionsPrototypes[functionName];
     return functionPrototype->generate();
 }
 
+
 bool FunctionFactory::haveFunction(std::string functionPrototypeName) {
     return this->functionsPrototypes.find(functionPrototypeName) != this->functionsPrototypes.end();
 }
-
-
 
 
 FunctionPrototype::FunctionPrototype(std::string name, dtt_type* dtt, int dtt_size, dtt_arg_type* dtt_args, int dtt_args_size,
@@ -291,6 +282,7 @@ FunctionPrototype::FunctionPrototype(std::string name, dtt_type* dtt, int dtt_si
     this->arg_table_size = arg_table_size;
     this->var_table = var_table;
 }
+
 
 Function* FunctionPrototype::generate() {
     return new Function(*this);
@@ -309,15 +301,18 @@ Function::Function(FunctionPrototype& functionPrototype) {
     this->var_table = functionPrototype.var_table;
 }
 
+
 void Function::run() {
     std::cout << *this << std::endl;
     while(this->vpc < this->dtt_size)
         this->dtt[this->vpc++]();
 }
 
+
 dtt_arg_type& Function::getNextArg() {
     return this->dtt_args[arg_c++];
 }
+
 
 std::ostream& operator<<(std::ostream& s, const Function& function)
 {

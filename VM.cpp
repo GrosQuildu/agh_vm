@@ -14,17 +14,16 @@ bool VM::isInitialized = false;
 FunctionFactory VM::functionFactory;
 
 
-VM& VM::getVM(const std::string& codeDirPath) {
+void VM::initialize(const std::string& codeDirPath) {
     if(!VM::isInitialized) {
         VM::functionFactory.initialize(codeDirPath);
         VM::isInitialized = true;
     }
-    static VM vm;
-    return vm;
 }
 
 VM& VM::getVM() {
-    return VM::getVM("");
+    static VM vm;
+    return vm;
 }
 
 void VM::start() {
