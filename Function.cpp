@@ -80,10 +80,10 @@ void FunctionFactory::addFunction(std::string codePath) {
 }
 
 
-dtt_arg_type FunctionFactory::parse_load(std::string line, int arg_table_size, std::map<std::string, int> &var_table) {
+dtt_arg FunctionFactory::parse_load(std::string line, int arg_table_size, std::map<std::string, int> &var_table) {
     std::string bytecode;
     std::string bytecode_arg;
-    dtt_arg_type dtt_arg_tmp = dtt_arg_type();
+    dtt_arg dtt_arg_tmp = dtt_arg();
 
     if(line.find(" ") == line.npos)
         throw ParserException("Argument to LOAD bytecode required");
@@ -129,7 +129,7 @@ dtt_arg_type FunctionFactory::parse_load(std::string line, int arg_table_size, s
 
 
 
-dtt_type FunctionFactory::parse_instruction(std::string line, std::vector<dtt_arg_type> &dtt_args_vector) {
+dtt_func FunctionFactory::parse_instruction(std::string line, std::vector<dtt_arg> &dtt_args_vector) {
     std::vector<std::set<char>> &required_args = bytecodeMapping.at(line).second;
     int counter = (int)dtt_args_vector.size() - 1;
 
@@ -203,8 +203,8 @@ FunctionPrototype* FunctionFactory::parseCode(std::string codePath) {
     }
 
     // bytecodes
-    std::vector<dtt_type> dtt_vector;
-    std::vector<dtt_arg_type> dtt_args_vector;
+    std::vector<dtt_func> dtt_vector;
+    std::vector<dtt_arg> dtt_args_vector;
     std::string bytecode;
     std::string bytecode_arg;
 
@@ -212,14 +212,14 @@ FunctionPrototype* FunctionFactory::parseCode(std::string codePath) {
         trim(line);
         if(!line.empty() && !startswith(line, "//")) {
             if(startswith(line, "LOAD")) {
-                dtt_arg_type dtt_arg_tmp = parse_load(line, arg_table_size, var_table);
+                dtt_arg dtt_arg_tmp = parse_load(line, arg_table_size, var_table);
                 dtt_args_vector.push_back(dtt_arg_tmp);
             } else if(line == "END") {
                 endReached = true;
             } else if(startswith(line, "DEFINE")) {
                 throw ParserException("Variables definitions can appear only at the beginnig og the function");
             } else if(bytecodeMapping.find(line) != bytecodeMapping.end()) {
-                dtt_type dtt_tmp = parse_instruction(line, dtt_args_vector);
+                dtt_func dtt_tmp = parse_instruction(line, dtt_args_vector);
                 dtt_vector.push_back(dtt_tmp);
             } else {
                 throw ParserException("Unknown bytecode: " + line);
@@ -232,15 +232,10 @@ FunctionPrototype* FunctionFactory::parseCode(std::string codePath) {
     if(!endReached)
         throw ParserException("END not fund");
 
-    int dtt_size = (int)dtt_vector.size();
-    dtt_type* dtt = new dtt_type[dtt_size];
-    std::copy(dtt_vector.begin(), dtt_vector.end(), dtt);
+    std::forward_list<dtt_func>* dtt = new std::forward_list<dtt_func>(dtt_vector.begin(), dtt_vector.end());
+    std::forward_list<dtt_arg>* dtt_args = new std::forward_list<dtt_arg>(dtt_args_vector.begin(), dtt_args_vector.end());
 
-    int dtt_args_size = (int)dtt_args_vector.size();
-    dtt_arg_type* dtt_args = new dtt_arg_type[dtt_args_size];
-    std::copy(dtt_args_vector.begin(), dtt_args_vector.end(), dtt_args);
-
-    return new FunctionPrototype(name, dtt, dtt_size, dtt_args, dtt_args_size, arg_table_size, var_table);
+    return new FunctionPrototype(name, dtt, dtt_args, arg_table_size, var_table);
 }
 
 void FunctionFactory::initialize(std::string codeDirPath) {
@@ -272,13 +267,12 @@ bool FunctionFactory::haveFunction(std::string functionPrototypeName) {
 }
 
 
-FunctionPrototype::FunctionPrototype(std::string name, dtt_type* dtt, int dtt_size, dtt_arg_type* dtt_args, int dtt_args_size,
-                                     int arg_table_size, std::map<std::string, int>var_table) {
+FunctionPrototype::FunctionPrototype(std::string name, std::forward_list<dtt_func>* dtt,
+                                     std::forward_list<dtt_arg>* dtt_args, int arg_table_size,
+                                     std::map<std::string,int>var_table) {
     this->name = name;
     this->dtt = dtt;
-    this->dtt_size = dtt_size;
     this->dtt_args = dtt_args;
-    this->dtt_args_size = dtt_args_size;
     this->arg_table_size = arg_table_size;
     this->var_table = var_table;
 }
@@ -292,25 +286,27 @@ Function* FunctionPrototype::generate() {
 Function::Function(FunctionPrototype& functionPrototype) {
     this->name = functionPrototype.name;
     this->dtt = functionPrototype.dtt;
-    this->dtt_size = functionPrototype.dtt_size;
 
     this->dtt_args = functionPrototype.dtt_args;
-    this->dtt_args_size = functionPrototype.dtt_args_size;
 
     this->arg_table = new int[functionPrototype.arg_table_size];
     this->var_table = functionPrototype.var_table;
+
+    this->vpc = this->dtt->begin();
 }
 
 
 void Function::run() {
     std::cout << *this << std::endl;
-    while(this->vpc < this->dtt_size)
-        this->dtt[this->vpc++]();
+    while(this->vpc != this->dtt->end())
+        (*this->vpc++)();
 }
 
 
-dtt_arg_type& Function::getNextArg() {
-    return this->dtt_args[arg_c++];
+dtt_arg& Function::getNextArg() {
+    dtt_arg& nextArg = this->dtt_args->front();
+    this->dtt_args->pop_front();
+    return nextArg;
 }
 
 
@@ -318,9 +314,9 @@ std::ostream& operator<<(std::ostream& s, const Function& function)
 {
     s << function.name << "\n";
     s << "CODE:\n";
-    for (int i = 0; i < function.dtt_args_size; ++i) {
+    for (auto bytecode = function.dtt->begin(); bytecode != function.dtt->end(); bytecode++) {
         for (auto it=bytecodeMapping.begin(); it!=bytecodeMapping.end(); ++it)
-            if(it->second.first == function.dtt[i]) {
+            if(it->second.first == *bytecode) {
                 s << "  " << it->first << "\n";
                 break;
             }

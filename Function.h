@@ -10,14 +10,15 @@
 #include <netinet/in.h>
 #include <vector>
 #include <set>
+#include <forward_list>
 
-typedef void (* dtt_type)();
+typedef void (*dtt_func)();
 
-typedef struct dtt_arg_type {
+typedef struct dtt_arg {
     char type;
     int valInt;
     std::string valStr;
-} dtt_arg_type;
+} dtt_arg;
 
 const char VAR = 0;
 const char ARG = 1;
@@ -43,7 +44,7 @@ void vm_mul();
 
 
 static const std::string bytecodeExtension = ".pp";
-static std::map<std::string, std::pair<dtt_type, std::vector<std::set<char>>>> bytecodeMapping = {
+static std::map<std::string, std::pair<dtt_func, std::vector<std::set<char>>>> bytecodeMapping = {
         // BYTECODE: (function, vector({arg1type | arg1type}, {arg2type}, {arg3type}))
         {"DECLARE", {nullptr,   { {VAR} }}},
         {"ASSIGN",  {vm_assign, { {VAR}, {VAR,CONST,ARG} }}},
@@ -70,14 +71,12 @@ class Function;
 
 class FunctionPrototype {
 public:
-    FunctionPrototype(std::string, dtt_type[], int, dtt_arg_type[], int, int, std::map<std::string, int>);
+    FunctionPrototype(std::string, std::forward_list<dtt_func>*, std::forward_list<dtt_arg>*, int, std::map<std::string, int>);
     Function* generate();
 
     std::string name;
-    dtt_type *dtt = nullptr;
-    int dtt_size = 0;
-    dtt_arg_type* dtt_args;
-    int dtt_args_size = 0;
+    std::forward_list<dtt_func> *dtt = nullptr;
+    std::forward_list<dtt_arg>* dtt_args;
     int arg_table_size = 0;
     std::map<std::string, int>var_table;
 };
@@ -89,19 +88,17 @@ public:
     Function(FunctionPrototype&);
 
     void run();
-    dtt_arg_type& getNextArg();
+    dtt_arg& getNextArg();
     friend std::ostream& operator<<(std::ostream&, const Function&);
 
     std::string name;
-    dtt_type *dtt = nullptr;
-    int dtt_size = 0;
-    dtt_arg_type* dtt_args;
-    int dtt_args_size = 0;
+    std::forward_list<dtt_func> *dtt = nullptr;
+    std::forward_list<dtt_arg>* dtt_args;
     int *arg_table;
     std::map<std::string, int>var_table;
 
     Function* returnFunction = nullptr;
-    int vpc = 0;
+    std::forward_list<dtt_func>::iterator vpc;
     int arg_c = 0;
     int return_variable = 0;
 };
@@ -144,28 +141,26 @@ private:
      * @param string line - bytecode to parse
      * @param int arg_table_size
      * @param map<std::string, int> var_table
-     * @return dtt_arg_type - argument for bytecode
+     * @return dtt_arg - argument for bytecode
      */
-    static dtt_arg_type parse_load(std::string, int, std::map<std::string, int>&);
+    static dtt_arg parse_load(std::string, int, std::map<std::string, int>&);
 
 
     /**
      * Check if correct arguments are passed to bytecode, returns corresponding function
      * @param string line - bytecode to parse
-     * @param vector<dtt_arg_type> dtt_args_vector - arguments loaded
-     * @return dtt_type - pointer to function
+     * @param vector<dtt_arg> dtt_args_vector - arguments loaded
+     * @return dtt_func - pointer to function
      */
-    static dtt_type parse_instruction(std::string, std::vector<dtt_arg_type>&);
+    static dtt_func parse_instruction(std::string, std::vector<dtt_arg>&);
 
     /**
      * Parse bytecode to FunctionPrototype
      * @param string codePath - path to function's code
      * @return FunctionPrototype*, created with:
          * string name - function name
-         * dtt_type[] dtt - dtt table (array of pointers to functions that gets void and returns void)
-         * int dtt_size
-         * dtt_arg[] dtt_args - table of dtt_arg structs, arguments for functions stored in dtt table
-         * int dtt_args_size
+         * std::forward_list<dtt_func> dtt - dtt list (list of pointers to functions that gets void and returns void)
+         * std::forward_list<dtt_arg> dtt_args - list of dtt_arg structs, arguments for functions stored in dtt table
          * int arg_table_size - function's arguments table size
          * map<string, int> var_table - function's variables map
      */
