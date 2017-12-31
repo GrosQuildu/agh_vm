@@ -3,15 +3,6 @@
 //
 
 #include "Function.h"
-#include "VM.h"
-#include "Exceptions.h"
-#include "Helpers.h"
-
-#include <dirent.h>
-#include <sstream>
-#include <iostream>
-#include <fstream>
-#include <vector>
 
 
 const std::string const2str(char c) {
@@ -32,53 +23,11 @@ const std::string const2str(char c) {
 }
 
 
-void vm_assign(){};
-void vm_print() {
-    auto cf = VM::getVM().getCurrentFunction();
-    auto arg0 = cf->getNextArg();
-
-    int val0 = arg0.valInt;
-    if(arg0.type == VAR)
-        val0 = cf->var_table[arg0.valStr];
-
-    std::cout << val0 << "\n";
-}
-
-void vm_call(){};
-void vm_return(){};
-
-void vm_send(){};
-void vm_recv(){};
-void vm_start(){};
-void vm_join(){};
-void vm_stop(){};
-
-void vm_add() {
-    auto cf = VM::getVM().getCurrentFunction();
-    auto arg0 = cf->getNextArg();
-    auto arg1 = cf->getNextArg();
-    auto arg2 = cf->getNextArg();
-
-    int val1 = arg1.valInt;
-    if(arg1.type == VAR)
-        val1 = cf->var_table[arg1.valStr];
-
-    int val2 = arg2.valInt;
-    if(arg2.type == VAR)
-        val2 = cf->var_table[arg2.valStr];
-
-    cf->var_table[arg0.valStr] = val1 + val2;
-}
-void vm_sub(){};
-void vm_div(){};
-void vm_mul(){};
-
 
 void FunctionFactory::addFunction(std::string codePath) {
     auto functionPrototype = parseCode(codePath);
     FunctionFactory::functionsPrototypes[functionPrototype->name] = functionPrototype;
 }
-
 
 dtt_arg FunctionFactory::parse_load(std::string line, int arg_table_size, std::map<std::string, int> &var_table) {
     std::string bytecode;
@@ -126,8 +75,6 @@ dtt_arg FunctionFactory::parse_load(std::string line, int arg_table_size, std::m
     }
     return dtt_arg_tmp;
 }
-
-
 
 dtt_func FunctionFactory::parse_instruction(std::string line, std::vector<dtt_arg> &dtt_args_vector) {
     std::vector<std::set<char>> &required_args = bytecodeMapping.at(line).second;
@@ -255,16 +202,15 @@ void FunctionFactory::initialize(std::string codeDirPath) {
     closedir (dir);
 }
 
-
 Function* FunctionFactory::makeFunction(std::string functionName) {
     auto functionPrototype = FunctionFactory::functionsPrototypes[functionName];
     return functionPrototype->generate();
 }
 
-
 bool FunctionFactory::haveFunction(std::string functionPrototypeName) {
     return this->functionsPrototypes.find(functionPrototypeName) != this->functionsPrototypes.end();
 }
+
 
 
 FunctionPrototype::FunctionPrototype(std::string name, std::forward_list<dtt_func>* dtt,
@@ -277,10 +223,10 @@ FunctionPrototype::FunctionPrototype(std::string name, std::forward_list<dtt_fun
     this->var_table = var_table;
 }
 
-
 Function* FunctionPrototype::generate() {
     return new Function(*this);
 }
+
 
 
 Function::Function(FunctionPrototype& functionPrototype) {
@@ -295,13 +241,11 @@ Function::Function(FunctionPrototype& functionPrototype) {
     this->vpc = this->dtt->begin();
 }
 
-
 void Function::run() {
     std::cout << *this << std::endl;
     while(this->vpc != this->dtt->end())
-        (*this->vpc++)();
+        (*this->vpc++)(*this);
 }
-
 
 dtt_arg& Function::getNextArg() {
     dtt_arg& nextArg = this->dtt_args->front();
@@ -309,9 +253,7 @@ dtt_arg& Function::getNextArg() {
     return nextArg;
 }
 
-
-std::ostream& operator<<(std::ostream& s, const Function& function)
-{
+std::ostream& operator<<(std::ostream& s, const Function& function) {
     s << function.name << "\n";
     s << "CODE:\n";
     for (auto bytecode = function.dtt->begin(); bytecode != function.dtt->end(); bytecode++) {
@@ -322,4 +264,45 @@ std::ostream& operator<<(std::ostream& s, const Function& function)
             }
     }
     return s;
-}  
+}
+
+
+void vm_assign(Function &currentFunction){};
+void vm_print(Function &currentFunction) {
+    auto arg0 = currentFunction.getNextArg();
+
+    int val0 = arg0.valInt;
+    if(arg0.type == VAR)
+        val0 = currentFunction.var_table[arg0.valStr];
+
+    std::cout << val0 << "\n";
+}
+
+void vm_call(Function &currentFunction){};
+void vm_return(Function &currentFunction){};
+
+void vm_send(Function &currentFunction){};
+void vm_recv(Function &currentFunction){};
+void vm_start(Function &currentFunction){};
+void vm_join(Function &currentFunction){};
+void vm_stop(Function &currentFunction){};
+
+void vm_add(Function &currentFunction) {
+    auto arg0 = currentFunction.getNextArg();
+    auto arg1 = currentFunction.getNextArg();
+    auto arg2 = currentFunction.getNextArg();
+
+    int val1 = arg1.valInt;
+    if(arg1.type == VAR)
+        val1 = currentFunction.var_table[arg1.valStr];
+
+    int val2 = arg2.valInt;
+    if(arg2.type == VAR)
+        val2 = currentFunction.var_table[arg2.valStr];
+
+    currentFunction.var_table[arg0.valStr] = val1 + val2;
+}
+void vm_sub(Function &currentFunction){};
+void vm_div(Function &currentFunction){};
+void vm_mul(Function &currentFunction){};
+

@@ -2,16 +2,13 @@
 // Created by gros on 13.12.17.
 //
 
+
 #include "VM.h"
-#include "Exceptions.h"
 
-
-//VM::VM(const std::string & codePath) {
-//
-//}
 
 bool VM::isInitialized = false;
 FunctionFactory VM::functionFactory;
+ThreadManager VM::threadManager;
 
 
 void VM::initialize(const std::string& codeDirPath) {
@@ -31,10 +28,16 @@ void VM::start() {
         throw VMRuntimeException("MAIN function not found");
     }
     auto mainFunction = VM::functionFactory.makeFunction("MAIN");
-    VM::getVM().currentFunction_ = mainFunction;
-    mainFunction->run();
+    auto mainThread = Thread("MAIN", mainFunction);
+    VM::threadManager.add(mainThread);
+
+    VM::threadManager.schedule();
 }
 
 Function* VM::getCurrentFunction() {
-    return VM::currentFunction_;
+    return VM::threadManager.getCurrentFunction();
+}
+
+Thread* VM::getCurrentThread() {
+    return VM::threadManager.getCurrentThread();
 }

@@ -5,11 +5,8 @@
 #ifndef VM_VM_H
 #define VM_VM_H
 
-#include <set>
 #include "Function.h"
-
-using std::set;
-
+#include "Thread.h"
 
 class VM {
 public:
@@ -24,13 +21,14 @@ public:
      */
     static VM& getVM();  // singleton
 
-    void start();
-    Function* getCurrentFunction();
-    Function *currentFunction_;
+    static void start();
+    static Function* getCurrentFunction();
+    static Thread* getCurrentThread();
 
 private:
     static bool isInitialized;
     static FunctionFactory functionFactory;
+    static ThreadManager threadManager;
 };
 
 
