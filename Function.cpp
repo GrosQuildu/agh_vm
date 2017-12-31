@@ -168,7 +168,7 @@ std::pair<FunctionPrototype*, std::forward_list<std::tuple<std::string, int, int
                 endReached = true;
             // PARSE DEFINE
             } else if(startswith(line, "DEFINE")) {
-                throw ParserException("Variables definitions can appear only at the beginnig og the function");
+                throw ParserException("Variables definitions can appear only at the beginning og the function");
             // PARSE OTHERS
             } else if(bytecodeMapping.find(line) != bytecodeMapping.end()) {
                 auto instructionChecked = check_instruction(line, dtt_args_vector, arg_counter);
@@ -226,10 +226,11 @@ void FunctionFactory::initialize(std::string codeDirPath) {
         if(!this->haveFunction(functionToCheckName))
             throw ParserException("Function " + functionToCheckName + " not found");
 
-        if(this->functionsPrototypes[functionToCheckName]->arg_table_size != functionArgumentsCount) {
+        FunctionPrototype* fp = this->functionsPrototypes[functionToCheckName];
+        if(fp->arg_table_size != functionArgumentsCount) {
             std::string errorMsg = "Function " + functionToCheckName + " called with wrong number of argument";
             errorMsg += "\nHave: " + std::to_string(functionArgumentsCount);
-            errorMsg += "\nShould be: " + std::to_string(this->functionsPrototypes[functionToCheckName]->arg_table_size);
+            errorMsg += "\nShould be: " + std::to_string(fp->arg_table_size);
             throw ParserException(errorMsg);
         }
     }
@@ -323,7 +324,14 @@ void vm_print(Function &currentFunction) {
     std::cout << val0 << "\n";
 }
 
-void vm_call(Function &currentFunction){};
+void vm_call(Function &currentFunction){
+    auto arg0 = currentFunction.getNextArg();
+    auto arg1 = currentFunction.getNextArg();
+    int val1 = currentFunction.var_table[arg1.valStr];
+
+//    Function* calledFunction = currentFunction.functionFactory->makeFunction(arg0.valStr);
+
+};
 void vm_return(Function &currentFunction){};
 
 void vm_send(Function &currentFunction){};
@@ -336,6 +344,7 @@ void vm_add(Function &currentFunction) {
     auto arg0 = currentFunction.getNextArg();
     auto arg1 = currentFunction.getNextArg();
     auto arg2 = currentFunction.getNextArg();
+//    auto x = VM::getCurrentFunction();
 
     int val1 = arg1.valInt;
     if(arg1.type == VAR)
