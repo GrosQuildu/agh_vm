@@ -10,7 +10,7 @@ using namespace std;
 
 int main() {
     cout<<"Start\n";
-    string codeDir = "/home/gros/studia/eaiib_3/wzorce/virtual_machine/python_predev/example_program/";
+    string codeDir = "/home/gros/studia/eaiib_3/wzorce/virtual_machine/example_program/";
     VM::initialize(codeDir);
     VM::getVM().start();
 }

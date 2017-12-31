@@ -24,11 +24,6 @@ const std::string const2str(char c) {
 
 
 
-void FunctionFactory::addFunction(std::string codePath) {
-    auto functionPrototype = parseCode(codePath);
-    FunctionFactory::functionsPrototypes[functionPrototype->name] = functionPrototype;
-}
-
 dtt_arg FunctionFactory::parse_load(std::string line, int arg_table_size, std::map<std::string, int> &var_table) {
     std::string bytecode;
     std::string bytecode_arg;
@@ -76,32 +71,34 @@ dtt_arg FunctionFactory::parse_load(std::string line, int arg_table_size, std::m
     return dtt_arg_tmp;
 }
 
-dtt_func FunctionFactory::parse_instruction(std::string line, std::vector<dtt_arg> &dtt_args_vector) {
+std::pair<bool, int> FunctionFactory::check_instruction(std::string line, std::vector<dtt_arg> &dtt_args_vector, int arg_counter) {
     std::vector<std::set<char>> &required_args = bytecodeMapping.at(line).second;
-    int counter = (int)dtt_args_vector.size() - 1;
+    auto argToCheck = dtt_args_vector.end() - arg_counter;
+    bool unknownNumberOfArguments = false;
+    int argumentsChecked = 0;
 
-    for(auto required_arg_tuple = required_args.rbegin(); required_arg_tuple != required_args.rend(); ++required_arg_tuple) {
-        // empty set -> unknown (at paring time) number of elements
-        if(required_arg_tuple->empty())
+    for(auto required_arg_tuple = required_args.begin(); required_arg_tuple != required_args.end(); ++required_arg_tuple) {
+        // empty set -> unknown (at parsing time) number of elements
+        if(required_arg_tuple->empty()) {
+            unknownNumberOfArguments = true;
             break;
-        if(required_arg_tuple->find(dtt_args_vector.at(counter--).type) == required_arg_tuple->end()) {
+        }
+        if(required_arg_tuple->find((*argToCheck).type) == required_arg_tuple->end()) {
             std::string err_msg = "Wrong arguments (calls to LOADs) for " + line + "\n";
             err_msg += "Required: " + vector2string(required_args) + "\n";
             err_msg += "Found: [";
-            for (int i = 0; i < required_args.size(); ++i) {
-                if(i + 1 <= dtt_args_vector.size())
-                    err_msg += const2str(dtt_args_vector.at(dtt_args_vector.size() - i - 1).type) + ", ";
-                else
-                    break;
-            }
+            for (auto it = dtt_args_vector.end() - arg_counter; it != dtt_args_vector.end(); ++it)
+                err_msg += const2str((*it).type) + ", ";
             err_msg += "]";
             throw ParserException(err_msg);
         }
+        argToCheck++;
+        argumentsChecked++;
     }
-    return bytecodeMapping.at(line).first;
+    return std::make_pair(unknownNumberOfArguments, argumentsChecked);
 }
 
-FunctionPrototype* FunctionFactory::parseCode(std::string codePath) {
+std::pair<FunctionPrototype*, std::forward_list<std::tuple<std::string, int, int>>> FunctionFactory::parseCode(std::string codePath) {
     bool endReached = false;
     std::string line;
     std::ifstream codeFile(codePath);
@@ -155,25 +152,41 @@ FunctionPrototype* FunctionFactory::parseCode(std::string codePath) {
     std::string bytecode;
     std::string bytecode_arg;
 
+    std::forward_list<std::tuple<std::string, int, int>> calledFunctionsToCheck;
+    int arg_counter = 0;
+
     do {
         trim(line);
         if(!line.empty() && !startswith(line, "//")) {
+            // PARSE LOADS
             if(startswith(line, "LOAD")) {
                 dtt_arg dtt_arg_tmp = parse_load(line, arg_table_size, var_table);
                 dtt_args_vector.push_back(dtt_arg_tmp);
+                arg_counter++;
+            // PARSE END
             } else if(line == "END") {
                 endReached = true;
+            // PARSE DEFINE
             } else if(startswith(line, "DEFINE")) {
                 throw ParserException("Variables definitions can appear only at the beginnig og the function");
+            // PARSE OTHERS
             } else if(bytecodeMapping.find(line) != bytecodeMapping.end()) {
-                dtt_func dtt_tmp = parse_instruction(line, dtt_args_vector);
-                dtt_vector.push_back(dtt_tmp);
+                auto instructionChecked = check_instruction(line, dtt_args_vector, arg_counter);
+                bool unknownNumberOfArguments = instructionChecked.first;
+                int argumentsChecked = instructionChecked.second;
+                if(unknownNumberOfArguments) {
+                    std::string functionToCheckName = dtt_args_vector.at(dtt_args_vector.size() - arg_counter).valStr;
+                    calledFunctionsToCheck.push_front(std::make_tuple(functionToCheckName,
+                                                                      dtt_args_vector.size() - arg_counter,
+                                                                      arg_counter - argumentsChecked));
+                }
+                arg_counter = 0;
+                dtt_vector.push_back(bytecodeMapping.at(line).first);
             } else {
                 throw ParserException("Unknown bytecode: " + line);
             }
         }
     } while (!endReached && std::getline(codeFile, line));
-
     codeFile.close();
 
     if(!endReached)
@@ -182,7 +195,7 @@ FunctionPrototype* FunctionFactory::parseCode(std::string codePath) {
     std::forward_list<dtt_func>* dtt = new std::forward_list<dtt_func>(dtt_vector.begin(), dtt_vector.end());
     std::forward_list<dtt_arg>* dtt_args = new std::forward_list<dtt_arg>(dtt_args_vector.begin(), dtt_args_vector.end());
 
-    return new FunctionPrototype(name, dtt, dtt_args, arg_table_size, var_table);
+    return std::make_pair(new FunctionPrototype(name, dtt, dtt_args, arg_table_size, var_table), calledFunctionsToCheck);
 }
 
 void FunctionFactory::initialize(std::string codeDirPath) {
@@ -193,24 +206,47 @@ void FunctionFactory::initialize(std::string codeDirPath) {
 
     }
 
+    std::forward_list<std::tuple<std::string, int, int>> calledFunctionsToCheck;
     while ((ent = readdir (dir)) != NULL) {
         std::string filename = ent->d_name;
         if(endswith(filename, bytecodeExtension)) {
-            this->addFunction(codeDirPath + filename);
+            auto parsedCode = parseCode(codeDirPath + filename);
+            auto functionPrototype = parsedCode.first;
+            calledFunctionsToCheck.merge(parsedCode.second);
+            this->addFunction(functionPrototype);
         }
     }
     closedir (dir);
+
+    for(auto it = calledFunctionsToCheck.begin(); it != calledFunctionsToCheck.end(); it++) {
+        std::string functionToCheckName = std::get<0>(*it);
+        int functionArgumentsStartPosition = std::get<1>(*it);
+        int functionArgumentsCount = std::get<2>(*it);
+
+        if(!this->haveFunction(functionToCheckName))
+            throw ParserException("Function " + functionToCheckName + " not found");
+
+        if(this->functionsPrototypes[functionToCheckName]->arg_table_size != functionArgumentsCount) {
+            std::string errorMsg = "Function " + functionToCheckName + " called with wrong number of argument";
+            errorMsg += "\nHave: " + std::to_string(functionArgumentsCount);
+            errorMsg += "\nShould be: " + std::to_string(this->functionsPrototypes[functionToCheckName]->arg_table_size);
+            throw ParserException(errorMsg);
+        }
+    }
 }
 
 Function* FunctionFactory::makeFunction(std::string functionName) {
-    auto functionPrototype = FunctionFactory::functionsPrototypes[functionName];
+    auto functionPrototype = this->functionsPrototypes[functionName];
     return functionPrototype->generate();
+}
+
+void FunctionFactory::addFunction(FunctionPrototype* functionPrototype) {
+    this->functionsPrototypes[functionPrototype->name] = functionPrototype;
 }
 
 bool FunctionFactory::haveFunction(std::string functionPrototypeName) {
     return this->functionsPrototypes.find(functionPrototypeName) != this->functionsPrototypes.end();
 }
-
 
 
 FunctionPrototype::FunctionPrototype(std::string name, std::forward_list<dtt_func>* dtt,
@@ -232,10 +268,10 @@ Function* FunctionPrototype::generate() {
 Function::Function(FunctionPrototype& functionPrototype) {
     this->name = functionPrototype.name;
     this->dtt = functionPrototype.dtt;
-
     this->dtt_args = functionPrototype.dtt_args;
 
     this->arg_table = new int[functionPrototype.arg_table_size];
+    this->arg_table_size = functionPrototype.arg_table_size;
     this->var_table = functionPrototype.var_table;
 
     this->vpc = this->dtt->begin();
@@ -267,7 +303,16 @@ std::ostream& operator<<(std::ostream& s, const Function& function) {
 }
 
 
-void vm_assign(Function &currentFunction){};
+void vm_assign(Function &currentFunction){
+    auto arg0 = currentFunction.getNextArg();
+    auto arg1 = currentFunction.getNextArg();
+
+    int val1 = arg1.valInt;
+    if(arg1.type == VAR)
+        val1 = currentFunction.var_table[arg1.valStr];
+
+    currentFunction.var_table[arg0.valStr] = val1;
+};
 void vm_print(Function &currentFunction) {
     auto arg0 = currentFunction.getNextArg();
 
@@ -302,7 +347,49 @@ void vm_add(Function &currentFunction) {
 
     currentFunction.var_table[arg0.valStr] = val1 + val2;
 }
-void vm_sub(Function &currentFunction){};
-void vm_div(Function &currentFunction){};
-void vm_mul(Function &currentFunction){};
+void vm_sub(Function &currentFunction) {
+    auto arg0 = currentFunction.getNextArg();
+    auto arg1 = currentFunction.getNextArg();
+    auto arg2 = currentFunction.getNextArg();
+
+    int val1 = arg1.valInt;
+    if(arg1.type == VAR)
+        val1 = currentFunction.var_table[arg1.valStr];
+
+    int val2 = arg2.valInt;
+    if(arg2.type == VAR)
+        val2 = currentFunction.var_table[arg2.valStr];
+
+    currentFunction.var_table[arg0.valStr] = val1 - val2;
+};
+void vm_div(Function &currentFunction) {
+    auto arg0 = currentFunction.getNextArg();
+    auto arg1 = currentFunction.getNextArg();
+    auto arg2 = currentFunction.getNextArg();
+
+    int val1 = arg1.valInt;
+    if(arg1.type == VAR)
+        val1 = currentFunction.var_table[arg1.valStr];
+
+    int val2 = arg2.valInt;
+    if(arg2.type == VAR)
+        val2 = currentFunction.var_table[arg2.valStr];
+
+    currentFunction.var_table[arg0.valStr] = val1 / val2;
+};
+void vm_mul(Function &currentFunction) {
+    auto arg0 = currentFunction.getNextArg();
+    auto arg1 = currentFunction.getNextArg();
+    auto arg2 = currentFunction.getNextArg();
+
+    int val1 = arg1.valInt;
+    if(arg1.type == VAR)
+        val1 = currentFunction.var_table[arg1.valStr];
+
+    int val2 = arg2.valInt;
+    if(arg2.type == VAR)
+        val2 = currentFunction.var_table[arg2.valStr];
+
+    currentFunction.var_table[arg0.valStr] = val1 * val2;
+};
 

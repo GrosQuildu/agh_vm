@@ -82,9 +82,9 @@ public:
     Function* generate();
 
     std::string name;
-    std::forward_list<dtt_func> *dtt = nullptr;
-    std::forward_list<dtt_arg> *dtt_args = nullptr;
-    int arg_table_size = 0;
+    std::forward_list<dtt_func> *dtt;
+    std::forward_list<dtt_arg> *dtt_args;
+    int arg_table_size;
     std::map<std::string, int> var_table;
 };
 
@@ -99,15 +99,15 @@ public:
     friend std::ostream& operator<<(std::ostream&, const Function&);
 
     std::string name;
-    std::forward_list<dtt_func> *dtt = nullptr;
-    std::forward_list<dtt_arg> *dtt_args = nullptr;
-    int *arg_table = nullptr;
-    std::map<std::string, int> var_table;
+    std::forward_list<dtt_func> *dtt;
+    std::forward_list<dtt_arg> *dtt_args;
+    int *arg_table;
+    int arg_table_size = 0;
 
-    Function* returnFunction = nullptr;
+    std::map<std::string, int> var_table;
+    Function* returnFunction;
     std::forward_list<dtt_func>::iterator vpc;
-    int arg_c = 0;
-    int return_variable = 0;
+    int return_variable;
 };
 
 
@@ -121,10 +121,10 @@ public:
     void initialize(std::string);
 
     /**
-     * Add function to FunctionFactory from file
-     * @param string codePath
+     * Add functionPrototype to FunctionFactory
+     * @param FunctionPrototype* functionPrototype
      */
-    void addFunction(std::string);
+    void addFunction(FunctionPrototype*);
 
     /**
      * Check if function with given name exists in factory
@@ -156,22 +156,26 @@ private:
     /**
      * Check if correct arguments are passed to bytecode, returns corresponding function
      * @param string line - bytecode to parse
-     * @param vector<dtt_arg> dtt_args_vector - arguments loaded
+     * @param vector<dtt_arg> dtt_args_vector - all arguments loaded so far
      * @return dtt_func - pointer to function
      */
-    static dtt_func parse_instruction(std::string, std::vector<dtt_arg>&);
+    static std::pair<bool, int> check_instruction(std::string, std::vector<dtt_arg>&, int);
 
     /**
      * Parse bytecode to FunctionPrototype
      * @param string codePath - path to function's code
-     * @return FunctionPrototype*, created with:
-         * string name - function name
-         * std::forward_list<dtt_func> dtt - dtt list (list of pointers to functions that gets void and returns void)
-         * std::forward_list<dtt_arg> dtt_args - list of dtt_arg structs, arguments for functions stored in dtt table
-         * int arg_table_size - function's arguments table size
-         * map<string, int> var_table - function's variables map
+     * @return pair<FunctionPrototype*, forward_list<string, int>>
+        * FunctionPrototype* created with:
+            * string name - function name
+            * std::forward_list<dtt_func> dtt - dtt list (list of pointers to functions that gets void and returns void)
+            * std::forward_list<dtt_arg> dtt_args - list of dtt_arg structs, arguments for functions stored in dtt table
+            * int arg_table_size - function's arguments table size
+            * map<string, int> var_table - function's variables map
+        * forward_list<string, int> calledFunctionsToCheck with:
+            * function's name
+            * number of argument the function will be called
      */
-    static FunctionPrototype* parseCode(std::string);
+    static std::pair<FunctionPrototype*, std::forward_list<std::tuple<std::string, int, int>>> parseCode(std::string);
 };
 
 #endif //VM_FUNCTION_H
