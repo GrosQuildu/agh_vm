@@ -12,7 +12,7 @@ public:
     /** Initialize virtual machine singleton
      * @param string codePathDir
      */
-    static void initialize(const std::string&);
+    void initialize(const std::string&);
 
     /**
      * Get virtual machine singleton instance
@@ -33,6 +33,13 @@ private:
     static bool isInitialized;
     static FunctionFactory functionFactory;
     static ThreadManager threadManager;
+
+    static bool DEBUG;
+    static int ThreadWinWidth;
+    static int ThreadWinHeight;
+    static int ThreadWinMargin;
+    static std::vector<WINDOW*> windows;
+    static void refresh();
 };
 
 

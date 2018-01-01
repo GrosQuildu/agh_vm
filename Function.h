@@ -99,6 +99,7 @@ public:
     void run();
     dtt_arg& getNextArg();
     void setArguments(std::vector<int>);
+    std::vector<std::string> toStr() const;
     friend std::ostream& operator<<(std::ostream&, const Function&);
 
     std::string name;

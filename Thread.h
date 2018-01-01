@@ -8,7 +8,7 @@
 
 #include "Function.h"
 #include "Exceptions.h"
-
+#include <ncurses.h>
 
 const char THREAD_READY = 0;
 const char THREAD_BLOCKED = 1;
@@ -23,6 +23,8 @@ public:
     Function* currect_function;
     int status;
     std::vector<int> recv_table;
+
+    void refresh(WINDOW*);
 };
 
 
@@ -69,6 +71,8 @@ public:
 
     Function* getCurrentFunction();
     Thread* getCurrentThread();
+
+    void refreshThreads(std::vector<WINDOW*>, int);
 
 private:
     std::vector<Thread*> threads;

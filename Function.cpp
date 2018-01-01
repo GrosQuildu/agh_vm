@@ -314,16 +314,24 @@ dtt_arg& Function::getNextArg() {
     return nextArg;
 }
 
-std::ostream& operator<<(std::ostream& s, const Function& function) {
-    s << function.name << "\n";
-    s << "CODE:\n";
-    for (auto bytecode = function.dtt->begin(); bytecode != function.dtt->end(); bytecode++) {
+std::vector<std::string> Function::toStr() const {
+    std::vector<std::string> s;
+    s.push_back(this->name);
+    s.push_back("CODE:");
+    for (auto bytecode = this->dtt->begin(); bytecode != this->dtt->end(); bytecode++) {
         for (auto it=bytecodeMapping.begin(); it!=bytecodeMapping.end(); ++it)
             if(it->second.first == *bytecode) {
-                s << "  " << it->first << "\n";
+                s.push_back("    " + it->first);
                 break;
             }
     }
+    return s;
+}
+
+std::ostream& operator<<(std::ostream& s, const Function& function) {
+    auto lines = function.toStr();
+    for(auto it = lines.begin(); it != lines.end(); it++)
+        s << *it << "\n";
     return s;
 }
 

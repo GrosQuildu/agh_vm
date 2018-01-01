@@ -4,16 +4,46 @@
 
 
 #include "VM.h"
+#include <ncurses.h>
+#include <unistd.h>
+
 
 bool VM::isInitialized = false;
 FunctionFactory VM::functionFactory;
 ThreadManager VM::threadManager;
 
+bool VM::DEBUG = true;
+int VM::ThreadWinWidth = 50;
+int VM::ThreadWinHeight = 50;
+int VM::ThreadWinMargin = 2;
+std::vector<WINDOW*> VM::windows;
 
 void VM::initialize(const std::string& codeDirPath) {
     if(!VM::isInitialized) {
         VM::functionFactory.initialize(codeDirPath);
         VM::isInitialized = true;
+
+        initscr();
+        cbreak();
+        nodelay(stdscr, TRUE);
+        keypad(stdscr, FALSE);
+        noecho();
+
+        start_color();
+        init_pair(1, COLOR_MAGENTA, COLOR_BLACK);
+        init_pair(2, COLOR_CYAN, COLOR_BLACK);
+        init_pair(3, COLOR_GREEN, COLOR_BLACK);
+        init_pair(4, COLOR_WHITE, COLOR_BLACK);
+        init_pair(5, COLOR_BLUE, COLOR_BLACK);
+        init_pair(6, COLOR_YELLOW, COLOR_BLACK);
+        init_pair(7, COLOR_RED, COLOR_BLACK);
+
+        int windowsAmount = COLS / (VM::ThreadWinWidth + VM::ThreadWinMargin);
+        if(windowsAmount * (VM::ThreadWinWidth + VM::ThreadWinMargin) + VM::ThreadWinMargin > COLS)
+            windowsAmount--;
+        for(int i = 0; i < windowsAmount; i++)
+            VM::windows.push_back(newwin(VM::ThreadWinHeight, VM::ThreadWinWidth, VM::ThreadWinMargin,
+                                         (VM::ThreadWinWidth+VM::ThreadWinMargin)*i + VM::ThreadWinMargin));
     }
 }
 
@@ -38,6 +68,9 @@ void VM::stop() {
 }
 
 Function* VM::getCurrentFunction() {
+    if(VM::DEBUG) {
+        VM::refresh();
+    }
     return VM::threadManager.getCurrentFunction();
 }
 
@@ -60,4 +93,9 @@ void VM::stopThread(std::string threadName) {
     } catch(ThreadManagerException e) {
         VM::stop();
     }
+}
+
+void VM::refresh() {
+    VM::threadManager.refreshThreads(VM::windows, 0);
+    usleep(5 * 1000000);
 }

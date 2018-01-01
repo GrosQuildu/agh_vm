@@ -4,6 +4,7 @@
 
 #include "Thread.h"
 
+
 Thread::Thread(std::string name, Function *currect_function) {
     this->name = name;
     this->currect_function = currect_function;
@@ -22,6 +23,47 @@ Thread::~Thread() {
 void Thread::run() {
     while(this->currect_function != nullptr)
         this->currect_function->run();
+}
+
+void Thread::refresh(WINDOW *window) {
+    wclear(window);
+    box(window, 0 , 0);
+
+    int maxCodeLinesDisplay = 20;
+    int maxArgsDisplay = 20;
+
+    // add name and code
+    auto lines = this->currect_function->toStr();
+    int yPos = 1;
+    for(int i = 0; i < maxCodeLinesDisplay && yPos < lines.size(); yPos++, i++)
+        mvwaddstr(window, yPos, 1, lines.at((unsigned long)yPos-1).c_str());
+
+    // add vpc
+    int headerSize = 3;
+    auto vpcOffset = std::distance(this->currect_function->dtt->begin(), this->currect_function->vpc) - 1;
+    if(vpcOffset < 0)
+        vpcOffset = 0;
+    mvwaddstr(window, int(headerSize + vpcOffset), int(lines.at((unsigned long)headerSize + vpcOffset - 1).size() + 3), "<");
+
+    // add args to code
+    yPos += 2;
+    mvwaddstr(window, yPos, 1, "ARGS:");
+
+    auto it = this->currect_function->dtt_args->begin();
+    for(int i = 0; i < maxArgsDisplay && it != this->currect_function->dtt_args->end(); i++, yPos++, it++) {
+        std::string arg = const2str((*it).type) + "\t- ";
+        if((*it).type != CONST)
+            arg += (*it).valStr + " ";
+        if((*it).type == VAR || (*it).type == CONST) {
+            int argVal = (*it).valInt;
+            if ((*it).type == VAR)
+                argVal = this->currect_function->var_table[(*it).valStr];
+            arg += std::to_string(argVal);
+        }
+        mvwaddstr(window, yPos, 1, arg.c_str());
+    }
+
+    wrefresh(window);
 }
 
 
@@ -90,6 +132,15 @@ Thread *ThreadManager::getCurrentThread() {
     return this->threads.at(this->current_thread);
 }
 
+void ThreadManager::refreshThreads(std::vector<WINDOW*> windows, int startThread) {
+    int i = 0;
+    for(; i < windows.size() && i + startThread < this->threads.size(); i++){
+        this->threads.at((unsigned long)i + startThread)->refresh(windows.at((unsigned long)i));
+    }
+    for(; i < windows.size(); i++) {
+        wrefresh(windows.at((unsigned long)i));
+    }
+}
 
 
 unsigned long FIFOScheduler::schedule(unsigned long current_thread, std::vector<Thread*>& threads) {
