@@ -41,4 +41,20 @@ private:
 };
 
 
+class ThreadManagerException: public std::exception
+{
+public:
+    ThreadManagerException(std::string what) {
+        this->what_ = what;
+    }
+
+    virtual const char* what() const throw()
+    {
+        return this->what_.c_str();
+    }
+
+private:
+    std::string what_;
+};
+
 #endif //VM_EXCEPTIONS_H

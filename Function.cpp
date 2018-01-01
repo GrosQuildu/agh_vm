@@ -3,7 +3,7 @@
 //
 
 #include "Function.h"
-
+#include "VM.h"
 
 const std::string const2str(char c) {
     switch(c) {
@@ -198,6 +198,15 @@ std::pair<FunctionPrototype*, std::forward_list<std::tuple<std::string, int, int
     return std::make_pair(new FunctionPrototype(name, dtt, dtt_args, arg_table_size, var_table), calledFunctionsToCheck);
 }
 
+FunctionFactory::FunctionFactory(std::string codeDirPath) {
+    this->initialize(codeDirPath);
+}
+
+FunctionFactory::~FunctionFactory() {
+    for(auto it = this->functionsPrototypes.begin(); it != this->functionsPrototypes.end(); it++)
+        delete (*it).second;
+}
+
 void FunctionFactory::initialize(std::string codeDirPath) {
     DIR *dir;
     struct dirent *ent;
@@ -260,6 +269,13 @@ FunctionPrototype::FunctionPrototype(std::string name, std::forward_list<dtt_fun
     this->var_table = var_table;
 }
 
+FunctionPrototype::~FunctionPrototype() {
+    delete this->dtt;
+    delete this->dtt_args;
+    this->dtt = nullptr;
+    this->dtt_args = nullptr;
+}
+
 Function* FunctionPrototype::generate() {
     return new Function(*this);
 }
@@ -269,19 +285,27 @@ Function* FunctionPrototype::generate() {
 Function::Function(FunctionPrototype& functionPrototype) {
     this->name = functionPrototype.name;
     this->dtt = functionPrototype.dtt;
-    this->dtt_args = functionPrototype.dtt_args;
+    this->dtt_args = new std::forward_list<dtt_arg>(functionPrototype.dtt_args->begin(), functionPrototype.dtt_args->end());
 
-    this->arg_table = new int[functionPrototype.arg_table_size];
     this->arg_table_size = functionPrototype.arg_table_size;
     this->var_table = functionPrototype.var_table;
 
     this->vpc = this->dtt->begin();
+
+    this->anotherFunctionCalled = false;
+    this->returnFunction = nullptr;
+    this->return_variable = "";
+}
+
+Function::~Function() {
+    delete this->dtt_args;
+    this->dtt_args = nullptr;
 }
 
 void Function::run() {
     std::cout << *this << std::endl;
-    while(this->vpc != this->dtt->end())
-        (*this->vpc++)(*this);
+    while(this->vpc != this->dtt->end() && !this->anotherFunctionCalled)
+        (*this->vpc++)();
 }
 
 dtt_arg& Function::getNextArg() {
@@ -303,102 +327,170 @@ std::ostream& operator<<(std::ostream& s, const Function& function) {
     return s;
 }
 
+void Function::setArguments(std::vector<int> arguments) {
+    for (auto it = this->dtt_args->begin(); it != this->dtt_args->end(); it++) {
+        if((*it).type == ARG) {
+            (*it).type = CONST;
+            (*it).valInt = arguments.at((*it).valInt);
+        }
+    }
+}
 
-void vm_assign(Function &currentFunction){
-    auto arg0 = currentFunction.getNextArg();
-    auto arg1 = currentFunction.getNextArg();
+
+void vm_assign(){
+    auto currentFunction = VM::getCurrentFunction();
+    auto arg0 = currentFunction->getNextArg();
+    auto arg1 = currentFunction->getNextArg();
 
     int val1 = arg1.valInt;
     if(arg1.type == VAR)
-        val1 = currentFunction.var_table[arg1.valStr];
+        val1 = currentFunction->var_table[arg1.valStr];
 
-    currentFunction.var_table[arg0.valStr] = val1;
+    currentFunction->var_table[arg0.valStr] = val1;
 };
-void vm_print(Function &currentFunction) {
-    auto arg0 = currentFunction.getNextArg();
+void vm_print() {
+    auto currentFunction = VM::getCurrentFunction();
+    auto arg0 = currentFunction->getNextArg();
 
     int val0 = arg0.valInt;
     if(arg0.type == VAR)
-        val0 = currentFunction.var_table[arg0.valStr];
+        val0 = currentFunction->var_table[arg0.valStr];
 
     std::cout << val0 << "\n";
 }
 
-void vm_call(Function &currentFunction){
-    auto arg0 = currentFunction.getNextArg();
-    auto arg1 = currentFunction.getNextArg();
-    int val1 = currentFunction.var_table[arg1.valStr];
+void vm_call(){
+    auto currentFunction = VM::getCurrentFunction();
+    auto arg0 = currentFunction->getNextArg();
+    auto arg1 = currentFunction->getNextArg();
 
-//    Function* calledFunction = currentFunction.functionFactory->makeFunction(arg0.valStr);
+    currentFunction->anotherFunctionCalled = true;
+    currentFunction->return_variable = arg1.valStr;
+
+    auto newFunction = VM::getNewFunction(arg0.valStr);
+    std::vector<int> newFunctionArgs;
+
+    for (int i = 0; i < newFunction->arg_table_size; ++i) {
+        auto valArg = currentFunction->getNextArg();
+        int valNext = valArg.valInt;
+        if(valArg.type == VAR)
+            valNext = currentFunction->var_table[valArg.valStr];
+        newFunctionArgs.push_back(valNext);
+    }
+
+    newFunction->setArguments(newFunctionArgs);
+    newFunction->returnFunction = currentFunction;
+
+    VM::getCurrentThread()->currect_function = newFunction;
+};
+void vm_return(){
+    auto currentFunction = VM::getCurrentFunction();
+    auto arg0 = currentFunction->getNextArg();
+
+    int val0 = arg0.valInt;
+    if(arg0.type == VAR)
+        val0 = currentFunction->var_table[arg0.valStr];
+
+    if(currentFunction->returnFunction != nullptr) {
+        currentFunction->returnFunction->var_table[currentFunction->returnFunction->return_variable] = val0;
+        currentFunction->returnFunction->anotherFunctionCalled = false;
+    }
+    VM::getCurrentThread()->currect_function = currentFunction->returnFunction;
+    delete currentFunction;
+};
+
+void vm_send(){};
+void vm_recv(){};
+void vm_start(){
+    auto currentFunction = VM::getCurrentFunction();
+    auto arg0 = currentFunction->getNextArg();
+    auto arg1 = currentFunction->getNextArg();
+
+    auto newThread = VM::getNewThread(arg1.valStr, arg0.valStr);
+
+    std::vector<int> newFunctionArgs;
+    for (int i = 0; i < newThread->currect_function->arg_table_size; ++i) {
+        auto valArg = currentFunction->getNextArg();
+        int valNext = valArg.valInt;
+        if(valArg.type == VAR)
+            valNext = currentFunction->var_table[valArg.valStr];
+        newFunctionArgs.push_back(valNext);
+    }
+
+    newThread->currect_function->setArguments(newFunctionArgs);
+};
+void vm_join(){
 
 };
-void vm_return(Function &currentFunction){};
+void vm_stop(){
+    auto currentFunction = VM::getCurrentFunction();
+    auto arg0 = currentFunction->getNextArg();
 
-void vm_send(Function &currentFunction){};
-void vm_recv(Function &currentFunction){};
-void vm_start(Function &currentFunction){};
-void vm_join(Function &currentFunction){};
-void vm_stop(Function &currentFunction){};
+    VM::stopThread(arg0.valStr);
+};
 
-void vm_add(Function &currentFunction) {
-    auto arg0 = currentFunction.getNextArg();
-    auto arg1 = currentFunction.getNextArg();
-    auto arg2 = currentFunction.getNextArg();
-//    auto x = VM::getCurrentFunction();
+void vm_add() {
+    auto currentFunction = VM::getCurrentFunction();
+    auto arg0 = currentFunction->getNextArg();
+    auto arg1 = currentFunction->getNextArg();
+    auto arg2 = currentFunction->getNextArg();
 
     int val1 = arg1.valInt;
     if(arg1.type == VAR)
-        val1 = currentFunction.var_table[arg1.valStr];
+        val1 = currentFunction->var_table[arg1.valStr];
 
     int val2 = arg2.valInt;
     if(arg2.type == VAR)
-        val2 = currentFunction.var_table[arg2.valStr];
+        val2 = currentFunction->var_table[arg2.valStr];
 
-    currentFunction.var_table[arg0.valStr] = val1 + val2;
+    currentFunction->var_table[arg0.valStr] = val1 + val2;
 }
-void vm_sub(Function &currentFunction) {
-    auto arg0 = currentFunction.getNextArg();
-    auto arg1 = currentFunction.getNextArg();
-    auto arg2 = currentFunction.getNextArg();
+void vm_sub() {
+    auto currentFunction = VM::getCurrentFunction();
+    auto arg0 = currentFunction->getNextArg();
+    auto arg1 = currentFunction->getNextArg();
+    auto arg2 = currentFunction->getNextArg();
 
     int val1 = arg1.valInt;
     if(arg1.type == VAR)
-        val1 = currentFunction.var_table[arg1.valStr];
+        val1 = currentFunction->var_table[arg1.valStr];
 
     int val2 = arg2.valInt;
     if(arg2.type == VAR)
-        val2 = currentFunction.var_table[arg2.valStr];
+        val2 = currentFunction->var_table[arg2.valStr];
 
-    currentFunction.var_table[arg0.valStr] = val1 - val2;
+    currentFunction->var_table[arg0.valStr] = val1 - val2;
 };
-void vm_div(Function &currentFunction) {
-    auto arg0 = currentFunction.getNextArg();
-    auto arg1 = currentFunction.getNextArg();
-    auto arg2 = currentFunction.getNextArg();
+void vm_div() {
+    auto currentFunction = VM::getCurrentFunction();
+    auto arg0 = currentFunction->getNextArg();
+    auto arg1 = currentFunction->getNextArg();
+    auto arg2 = currentFunction->getNextArg();
 
     int val1 = arg1.valInt;
     if(arg1.type == VAR)
-        val1 = currentFunction.var_table[arg1.valStr];
+        val1 = currentFunction->var_table[arg1.valStr];
 
     int val2 = arg2.valInt;
     if(arg2.type == VAR)
-        val2 = currentFunction.var_table[arg2.valStr];
+        val2 = currentFunction->var_table[arg2.valStr];
 
-    currentFunction.var_table[arg0.valStr] = val1 / val2;
+    currentFunction->var_table[arg0.valStr] = val1 / val2;
 };
-void vm_mul(Function &currentFunction) {
-    auto arg0 = currentFunction.getNextArg();
-    auto arg1 = currentFunction.getNextArg();
-    auto arg2 = currentFunction.getNextArg();
+void vm_mul() {
+    auto currentFunction = VM::getCurrentFunction();
+    auto arg0 = currentFunction->getNextArg();
+    auto arg1 = currentFunction->getNextArg();
+    auto arg2 = currentFunction->getNextArg();
 
     int val1 = arg1.valInt;
     if(arg1.type == VAR)
-        val1 = currentFunction.var_table[arg1.valStr];
+        val1 = currentFunction->var_table[arg1.valStr];
 
     int val2 = arg2.valInt;
     if(arg2.type == VAR)
-        val2 = currentFunction.var_table[arg2.valStr];
+        val2 = currentFunction->var_table[arg2.valStr];
 
-    currentFunction.var_table[arg0.valStr] = val1 * val2;
+    currentFunction->var_table[arg0.valStr] = val1 * val2;
 };
 

@@ -16,6 +16,7 @@ const char THREAD_BLOCKED = 1;
 class Thread {
 public:
     Thread(std::string, Function*);
+    ~Thread();
     void run();
 
     std::string name;
@@ -32,7 +33,7 @@ public:
      * @param vector<Thread>& threads
      * @return unsigned long - next thread to run
      */
-    virtual unsigned long schedule(unsigned long, std::vector<Thread>&) = 0;
+    virtual unsigned long schedule(unsigned long, std::vector<Thread*>&) = 0;
     std::string name;
 
 protected:
@@ -43,13 +44,13 @@ protected:
 class FIFOScheduler : public ThreadScheduler {
 public:
     FIFOScheduler() : ThreadScheduler("FIFO") {};
-    unsigned long schedule(unsigned long, std::vector<Thread>&);
+    unsigned long schedule(unsigned long, std::vector<Thread*>&);
 };
 
 class RoundRobinScheduler : public ThreadScheduler {
 public:
     RoundRobinScheduler() : ThreadScheduler("RoundRobin") {};
-    unsigned long schedule(unsigned long, std::vector<Thread>&);
+    unsigned long schedule(unsigned long, std::vector<Thread*>&);
 };
 
 
@@ -57,8 +58,12 @@ public:
 class ThreadManager {
 public:
     ThreadManager();
-    void add(Thread&);
-    void remove(int);
+    ~ThreadManager();
+
+    Thread* addThread(std::string, Function*);
+    void removeThread(std::string);
+    void clearAll();
+
     void schedule();
     void changeScheduler(ThreadScheduler*);
 
@@ -66,7 +71,7 @@ public:
     Thread* getCurrentThread();
 
 private:
-    std::vector<Thread> threads;
+    std::vector<Thread*> threads;
     unsigned long current_thread;
     ThreadScheduler *scheduler = nullptr;
     std::vector<ThreadScheduler*> threadSchedulers;

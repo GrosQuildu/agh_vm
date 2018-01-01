@@ -22,7 +22,7 @@
 
 
 class Function;
-typedef void (*dtt_func)(Function&);
+typedef void (*dtt_func)();
 
 typedef struct dtt_arg {
     char type;
@@ -38,19 +38,19 @@ const char THREAD = 4;
 
 const std::string const2str(char);
 
-void vm_assign(Function &currentFunction);
-void vm_print(Function &currentFunction);
-void vm_call(Function &currentFunction);
-void vm_return(Function &currentFunction);
-void vm_send(Function &currentFunction);
-void vm_recv(Function &currentFunction);
-void vm_start(Function &currentFunction);
-void vm_join(Function &currentFunction);
-void vm_stop(Function &currentFunction);
-void vm_add(Function &currentFunction);
-void vm_sub(Function &currentFunction);
-void vm_div(Function &currentFunction);
-void vm_mul(Function &currentFunction);
+void vm_assign();
+void vm_print();
+void vm_call();
+void vm_return();
+void vm_send();
+void vm_recv();
+void vm_start();
+void vm_join();
+void vm_stop();
+void vm_add();
+void vm_sub();
+void vm_div();
+void vm_mul();
 
 
 static const std::string bytecodeExtension = ".pp";
@@ -79,6 +79,7 @@ static std::map<std::string, std::pair<dtt_func, std::vector<std::set<char>>>> b
 class FunctionPrototype {
 public:
     FunctionPrototype(std::string, std::forward_list<dtt_func>*, std::forward_list<dtt_arg>*, int, std::map<std::string, int>);
+    ~FunctionPrototype();
     Function* generate();
 
     std::string name;
@@ -93,27 +94,34 @@ public:
 class Function {
 public:
     Function(FunctionPrototype&);
+    ~Function();
 
     void run();
     dtt_arg& getNextArg();
+    void setArguments(std::vector<int>);
     friend std::ostream& operator<<(std::ostream&, const Function&);
 
     std::string name;
     std::forward_list<dtt_func> *dtt;
     std::forward_list<dtt_arg> *dtt_args;
-    int *arg_table;
-    int arg_table_size = 0;
-
+    int arg_table_size;
     std::map<std::string, int> var_table;
-    Function* returnFunction;
+
     std::forward_list<dtt_func>::iterator vpc;
-    int return_variable;
+
+    bool anotherFunctionCalled;
+    Function* returnFunction;
+    std::string return_variable;
 };
 
 
 
 class FunctionFactory {
 public:
+    FunctionFactory() {};
+    FunctionFactory(std::string);
+    ~FunctionFactory();
+
     /**
      * Initialize function factory with function from files in given directory
      * @param string codeDirPath

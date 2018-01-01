@@ -5,7 +5,6 @@
 #ifndef VM_VM_H
 #define VM_VM_H
 
-#include "Function.h"
 #include "Thread.h"
 
 class VM {
@@ -22,8 +21,13 @@ public:
     static VM& getVM();  // singleton
 
     static void start();
+    static void stop();
+
     static Function* getCurrentFunction();
     static Thread* getCurrentThread();
+    static Function* getNewFunction(std::string);
+    static Thread* getNewThread(std::string, std::string);
+    static void stopThread(std::string);
 
 private:
     static bool isInitialized;
