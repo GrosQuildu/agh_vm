@@ -21,29 +21,34 @@ std::vector<WINDOW*> VM::windows;
 void VM::initialize(const std::string& codeDirPath) {
     if(!VM::isInitialized) {
         VM::functionFactory.initialize(codeDirPath);
+        auto defaultScheduler = new RoundRobinScheduler();
+        VM::threadManager.changeScheduler(defaultScheduler);
         VM::isInitialized = true;
 
-        initscr();
-        cbreak();
-        nodelay(stdscr, TRUE);
-        keypad(stdscr, FALSE);
-        noecho();
+        if(VM::DEBUG) {
+            initscr();
+            cbreak();
+            nodelay(stdscr, TRUE);
+            keypad(stdscr, FALSE);
+            noecho();
 
-        start_color();
-        init_pair(1, COLOR_MAGENTA, COLOR_BLACK);
-        init_pair(2, COLOR_CYAN, COLOR_BLACK);
-        init_pair(3, COLOR_GREEN, COLOR_BLACK);
-        init_pair(4, COLOR_WHITE, COLOR_BLACK);
-        init_pair(5, COLOR_BLUE, COLOR_BLACK);
-        init_pair(6, COLOR_YELLOW, COLOR_BLACK);
-        init_pair(7, COLOR_RED, COLOR_BLACK);
+            start_color();
+            init_pair(1, COLOR_MAGENTA, COLOR_BLACK);
+            init_pair(2, COLOR_CYAN, COLOR_BLACK);
+            init_pair(3, COLOR_GREEN, COLOR_BLACK);
+            init_pair(4, COLOR_WHITE, COLOR_BLACK);
+            init_pair(5, COLOR_BLUE, COLOR_BLACK);
+            init_pair(6, COLOR_YELLOW, COLOR_BLACK);
+            init_pair(7, COLOR_RED, COLOR_BLACK);
 
-        int windowsAmount = COLS / (VM::ThreadWinWidth + VM::ThreadWinMargin);
-        if(windowsAmount * (VM::ThreadWinWidth + VM::ThreadWinMargin) + VM::ThreadWinMargin > COLS)
-            windowsAmount--;
-        for(int i = 0; i < windowsAmount; i++)
-            VM::windows.push_back(newwin(VM::ThreadWinHeight, VM::ThreadWinWidth, VM::ThreadWinMargin,
-                                         (VM::ThreadWinWidth+VM::ThreadWinMargin)*i + VM::ThreadWinMargin));
+
+            int windowsAmount = COLS / (VM::ThreadWinWidth + VM::ThreadWinMargin);
+            if (windowsAmount * (VM::ThreadWinWidth + VM::ThreadWinMargin) + VM::ThreadWinMargin > COLS)
+                windowsAmount--;
+            for (int i = 0; i < windowsAmount; i++)
+                VM::windows.push_back(newwin(VM::ThreadWinHeight, VM::ThreadWinWidth, VM::ThreadWinMargin,
+                                             (VM::ThreadWinWidth + VM::ThreadWinMargin) * i + VM::ThreadWinMargin));
+        }
     }
 }
 
@@ -68,9 +73,8 @@ void VM::stop() {
 }
 
 Function* VM::getCurrentFunction() {
-    if(VM::DEBUG) {
+    if(VM::DEBUG)
         VM::refresh();
-    }
     return VM::threadManager.getCurrentFunction();
 }
 
@@ -98,4 +102,8 @@ void VM::stopThread(std::string threadName) {
 void VM::refresh() {
     VM::threadManager.refreshThreads(VM::windows, 0);
     usleep(5 * 1000000);
+}
+
+void VM::setSchedulingFrequency(int frequency) {
+    VM::functionFactory.setSchedulingFrequency(frequency);
 }

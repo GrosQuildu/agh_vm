@@ -38,6 +38,7 @@ const char THREAD = 4;
 
 const std::string const2str(char);
 
+void vm_schedule();
 void vm_assign();
 void vm_print();
 void vm_call();
@@ -81,6 +82,8 @@ public:
     FunctionPrototype(std::string, std::forward_list<dtt_func>*, std::forward_list<dtt_arg>*, int, std::map<std::string, int>);
     ~FunctionPrototype();
     Function* generate();
+    void setSchedulingBytecodes(int);
+    void clearSchedulingBytecodes();
 
     std::string name;
     std::forward_list<dtt_func> *dtt;
@@ -148,6 +151,8 @@ public:
      * @return Function*
      */
     Function* makeFunction(std::string);  // factory method
+
+    void setSchedulingFrequency(int);
 
 private:
     std::map<std::string, FunctionPrototype*> functionsPrototypes;

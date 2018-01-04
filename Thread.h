@@ -35,24 +35,29 @@ public:
      * @param vector<Thread>& threads
      * @return unsigned long - next thread to run
      */
-    virtual unsigned long schedule(unsigned long, std::vector<Thread*>&) = 0;
-    std::string name;
+    virtual void initialize() = 0;
+    virtual Thread* schedule(Thread* current_thread, std::vector<Thread*>& threads) = 0;
 
 protected:
-    ThreadScheduler(std::string name) : name{name} {};
+    std::string name;
+    bool initialized;
+
+    ThreadScheduler(std::string name) : name{name}, initialized{false} {};
 };
 
 
 class FIFOScheduler : public ThreadScheduler {
 public:
-    FIFOScheduler() : ThreadScheduler("FIFO") {};
-    unsigned long schedule(unsigned long, std::vector<Thread*>&);
+    FIFOScheduler();
+    void initialize();
+    Thread* schedule(Thread* current_thread, std::vector<Thread*>& threads);
 };
 
 class RoundRobinScheduler : public ThreadScheduler {
 public:
-    RoundRobinScheduler() : ThreadScheduler("RoundRobin") {};
-    unsigned long schedule(unsigned long, std::vector<Thread*>&);
+    RoundRobinScheduler();
+    void initialize();
+    Thread* schedule(Thread* current_thread, std::vector<Thread*>& threads);
 };
 
 
@@ -76,9 +81,8 @@ public:
 
 private:
     std::vector<Thread*> threads;
-    unsigned long current_thread;
-    ThreadScheduler *scheduler = nullptr;
-    std::vector<ThreadScheduler*> threadSchedulers;
+    Thread* current_thread;
+    ThreadScheduler* scheduler;
 };
 
 #endif //VM_THREAD_H

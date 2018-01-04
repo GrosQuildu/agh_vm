@@ -258,6 +258,15 @@ bool FunctionFactory::haveFunction(std::string functionPrototypeName) {
     return this->functionsPrototypes.find(functionPrototypeName) != this->functionsPrototypes.end();
 }
 
+void FunctionFactory::setSchedulingFrequency(int frequency) {
+    for(auto it = this->functionsPrototypes.begin(); it != this->functionsPrototypes.end(); it++) {
+        if(frequency == 0)
+            (*it).second->clearSchedulingBytecodes();
+        else
+            (*it).second->setSchedulingBytecodes(frequency);
+    }
+}
+
 
 FunctionPrototype::FunctionPrototype(std::string name, std::forward_list<dtt_func>* dtt,
                                      std::forward_list<dtt_arg>* dtt_args, int arg_table_size,
@@ -280,6 +289,20 @@ Function* FunctionPrototype::generate() {
     return new Function(*this);
 }
 
+void FunctionPrototype::setSchedulingBytecodes(int frequency) {
+    dtt_func blockingBytecodes[] {vm_schedule, vm_call, vm_return, vm_recv, vm_join};
+    auto it = this->dtt->begin();
+    while(it != this->dtt->end()) {
+        for (int i = 0; i < frequency && it != this->dtt->end(); i++, it++);
+        // do not set vm_schedule after bytecode that may loose control
+        if(it != this->dtt->end() && std::find(std::begin(blockingBytecodes), std::end(blockingBytecodes), *it) != std::end(blockingBytecodes))
+            this->dtt->insert_after(it, &vm_schedule);
+    }
+}
+
+void FunctionPrototype::clearSchedulingBytecodes() {
+    this->dtt->remove(vm_schedule);
+}
 
 
 Function::Function(FunctionPrototype& functionPrototype) {
@@ -344,6 +367,10 @@ void Function::setArguments(std::vector<int> arguments) {
     }
 }
 
+
+void vm_schedule() {
+
+}
 
 void vm_assign(){
     auto currentFunction = VM::getCurrentFunction();

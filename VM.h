@@ -29,6 +29,8 @@ public:
     static Thread* getNewThread(std::string, std::string);
     static void stopThread(std::string);
 
+    static void setSchedulingFrequency(int);
+
 private:
     static bool isInitialized;
     static FunctionFactory functionFactory;
