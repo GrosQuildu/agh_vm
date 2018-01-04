@@ -57,6 +57,8 @@ void vm_mul();
 static const std::string bytecodeExtension = ".pp";
 static std::map<std::string, std::pair<dtt_func, std::vector<std::set<char>>>> bytecodeMapping = {
         // BYTECODE: (function, vector({arg1type | arg1type}, {arg2type}, {arg3type}))
+        {"SCHEDULE", {vm_schedule, {{}}}},
+
         {"DECLARE", {nullptr,   { {VAR} }}},
         {"ASSIGN",  {vm_assign, { {VAR}, {VAR,CONST,ARG} }}},
         {"PRINT",   {vm_print,  { {VAR,CONST,ARG} }}},

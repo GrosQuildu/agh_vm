@@ -30,13 +30,13 @@ void Thread::refresh(WINDOW *window) {
     wclear(window);
     box(window, 0 , 0);
 
-    int maxCodeLinesDisplay = 20;
+    int maxCodeLinesDisplay = 30;
     int maxArgsDisplay = 20;
 
     // add name and code
     auto lines = this->currect_function->toStr();
     int yPos = 1;
-    for(int i = 0; i < maxCodeLinesDisplay && yPos < lines.size(); yPos++, i++)
+    for(int i = 0; i < maxCodeLinesDisplay && yPos - 1 < lines.size(); yPos++, i++)
         mvwaddstr(window, yPos, 1, lines.at((unsigned long)yPos-1).c_str());
 
     // add vpc
@@ -49,6 +49,7 @@ void Thread::refresh(WINDOW *window) {
     // add args to code
     yPos += 2;
     mvwaddstr(window, yPos, 1, "ARGS:");
+    yPos += 1;
 
     auto it = this->currect_function->dtt_args->begin();
     for(int i = 0; i < maxArgsDisplay && it != this->currect_function->dtt_args->end(); i++, yPos++, it++) {
@@ -137,7 +138,10 @@ void ThreadManager::refreshThreads(std::vector<WINDOW*> windows, int startThread
 FIFOScheduler::FIFOScheduler() : ThreadScheduler("FIFO") {}
 
 void FIFOScheduler::initialize(){
-    VM::setSchedulingFrequency(0);
+    if(!this->initialized) {
+        VM::setSchedulingFrequency(0);
+        this->initialized = true;
+    }
 }
 
 
@@ -157,7 +161,10 @@ Thread* FIFOScheduler::schedule(Thread* current_thread, std::vector<Thread*>& th
 RoundRobinScheduler::RoundRobinScheduler() : ThreadScheduler("RoundRobin") {}
 
 void RoundRobinScheduler::initialize() {
-    VM::setSchedulingFrequency(5);
+    if(!this->initialized) {
+        VM::setSchedulingFrequency(5);
+        this->initialized = true;
+    }
 }
 
 Thread* RoundRobinScheduler::schedule(Thread* current_thread, std::vector<Thread*>& threads) {

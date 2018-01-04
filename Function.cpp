@@ -290,12 +290,14 @@ Function* FunctionPrototype::generate() {
 }
 
 void FunctionPrototype::setSchedulingBytecodes(int frequency) {
+    if(frequency <= 1)
+        throw VMRuntimeException("Schedule bytecode frequency must be greater than 1");
     dtt_func blockingBytecodes[] {vm_schedule, vm_call, vm_return, vm_recv, vm_join};
     auto it = this->dtt->begin();
     while(it != this->dtt->end()) {
-        for (int i = 0; i < frequency && it != this->dtt->end(); i++, it++);
+        for (int i = 0; i < frequency - 1 && it != this->dtt->end(); i++, it++);
         // do not set vm_schedule after bytecode that may loose control
-        if(it != this->dtt->end() && std::find(std::begin(blockingBytecodes), std::end(blockingBytecodes), *it) != std::end(blockingBytecodes))
+        if(it != this->dtt->end() && std::find(std::begin(blockingBytecodes), std::end(blockingBytecodes), *it) == std::end(blockingBytecodes))
             this->dtt->insert_after(it, &vm_schedule);
     }
 }
