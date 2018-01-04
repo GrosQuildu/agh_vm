@@ -307,6 +307,7 @@ void FunctionPrototype::clearSchedulingBytecodes() {
 }
 
 
+
 Function::Function(FunctionPrototype& functionPrototype) {
     this->name = functionPrototype.name;
     this->dtt = functionPrototype.dtt;
@@ -371,7 +372,10 @@ void Function::setArguments(std::vector<int> arguments) {
 
 
 void vm_schedule() {
+    auto currentFunction = VM::getCurrentFunction();
+    currentFunction->anotherFunctionCalled = true;
 
+    VM::getCurrentThread()->reshedule = true;
 }
 
 void vm_assign(){

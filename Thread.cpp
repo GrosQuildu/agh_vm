@@ -10,6 +10,7 @@ Thread::Thread(std::string name, Function *currect_function) {
     this->name = name;
     this->currect_function = currect_function;
     this->status = THREAD_READY;
+    this->reshedule = false;
 }
 
 Thread::~Thread() {
@@ -22,8 +23,16 @@ Thread::~Thread() {
 }
 
 void Thread::run() {
-    while(this->currect_function != nullptr)
+    while(this->currect_function != nullptr && !this->reshedule)
         this->currect_function->run();
+
+    if(this->currect_function == nullptr)
+        this->status = THREAD_FINISHED;
+
+    if(this->reshedule) {
+        this->reshedule = false;
+        this->currect_function->anotherFunctionCalled = false;
+    }
 }
 
 void Thread::refresh(WINDOW *window) {
@@ -69,6 +78,7 @@ void Thread::refresh(WINDOW *window) {
 }
 
 
+
 ThreadManager::ThreadManager() {
     this->scheduler = nullptr;
     this->current_thread = nullptr;
@@ -108,8 +118,11 @@ void ThreadManager::schedule() {
     if(this->threads.size() == 0)
         throw VMRuntimeException("No threads in ThreadManager");
 
-    this->current_thread = this->scheduler->schedule(this->current_thread, this->threads);
-    this->current_thread->run();
+    while(this->threads.size() > 0) {
+        this->current_thread = this->scheduler->schedule(this->current_thread, this->threads);
+        if(this->current_thread != nullptr)
+            this->current_thread->run();
+    }
 }
 
 void ThreadManager::changeScheduler(ThreadScheduler *scheduler) {
@@ -131,9 +144,39 @@ void ThreadManager::refreshThreads(std::vector<WINDOW*> windows, int startThread
         this->threads.at((unsigned long)i + startThread)->refresh(windows.at((unsigned long)i));
     }
     for(; i < windows.size(); i++) {
+        wclear(windows.at((unsigned long)i));
         wrefresh(windows.at((unsigned long)i));
     }
 }
+
+
+
+
+Thread *ThreadScheduler::schedule(Thread *current_thread, std::vector<Thread *> &threads) {
+    if(threads.size() == 0)
+        throw VMRuntimeException("Scheduling without any thread");
+
+    if(current_thread == nullptr)
+        return threads.at(0);
+
+    if(current_thread->status == THREAD_FINISHED) {
+        if(threads.size() == 1) {
+//            delete current_thread;
+            threads.clear();
+        } else {
+            auto currentThreadIt = std::find(threads.begin(), threads.end(), current_thread);
+            delete *currentThreadIt;
+            threads.erase(currentThreadIt);
+            return *currentThreadIt;
+        }
+    }
+
+    if(threads.size() == 1)
+        return threads.at(0);
+
+    return nullptr;
+}
+
 
 FIFOScheduler::FIFOScheduler() : ThreadScheduler("FIFO") {}
 
@@ -144,18 +187,20 @@ void FIFOScheduler::initialize(){
     }
 }
 
-
 Thread* FIFOScheduler::schedule(Thread* current_thread, std::vector<Thread*>& threads) {
-    if(current_thread == nullptr)
-        return threads.at(0);
+    if(threads.size() == 0)
+        return nullptr;
+
+    auto newThreadIt = ThreadScheduler::schedule(current_thread, threads);
+    if(newThreadIt != nullptr)
+        return newThreadIt;
+
     for(auto it = threads.begin(); it != threads.end(); it++) {
         if((*it)->status != THREAD_BLOCKED)
             return *it;
     }
     throw VMRuntimeException("All threads blocked");
 }
-
-
 
 
 RoundRobinScheduler::RoundRobinScheduler() : ThreadScheduler("RoundRobin") {}
@@ -168,8 +213,13 @@ void RoundRobinScheduler::initialize() {
 }
 
 Thread* RoundRobinScheduler::schedule(Thread* current_thread, std::vector<Thread*>& threads) {
-    if(current_thread == nullptr)
-        return threads.at(0);
+    auto newThreadIt = ThreadScheduler::schedule(current_thread, threads);
+    if(newThreadIt != nullptr)
+        return newThreadIt;
+
+    if(threads.size() == 0)
+        return nullptr;
+
     auto currentThreadIt = std::find(threads.begin(), threads.end(), current_thread);
     for(auto it = currentThreadIt + 1; it != currentThreadIt; it++) {
         if(it == threads.end())

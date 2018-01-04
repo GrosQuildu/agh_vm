@@ -12,6 +12,7 @@
 
 const char THREAD_READY = 0;
 const char THREAD_BLOCKED = 1;
+const char THREAD_FINISHED = 2;
 
 class Thread {
 public:
@@ -23,6 +24,7 @@ public:
     Function* currect_function;
     int status;
     std::vector<int> recv_table;
+    bool reshedule;
 
     void refresh(WINDOW*);
 };
@@ -36,7 +38,7 @@ public:
      * @return unsigned long - next thread to run
      */
     virtual void initialize() = 0;
-    virtual Thread* schedule(Thread* current_thread, std::vector<Thread*>& threads) = 0;
+    virtual Thread* schedule(Thread* current_thread, std::vector<Thread*>& threads);
 
 protected:
     std::string name;

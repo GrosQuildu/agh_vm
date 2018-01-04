@@ -101,7 +101,7 @@ void VM::stopThread(std::string threadName) {
 
 void VM::refresh() {
     VM::threadManager.refreshThreads(VM::windows, 0);
-    usleep(5 * 1000000);
+    usleep(1 * 1000000);
 }
 
 void VM::setSchedulingFrequency(int frequency) {
