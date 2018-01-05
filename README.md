@@ -18,3 +18,15 @@ make
 cd ..
 ./VM
 ```
+
+Or:
+
+```bash
+# for ARm
+bash ./build.sh ARM
+qemu-arm -L /usr/arm-linux-gnueabi/ VM
+
+# for x86/x64
+bash ./build.sh x86
+./VM
+```
