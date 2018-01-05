@@ -6,14 +6,24 @@ if [ "$#" -ne 1 ]; then
 fi
 
 if [ -d "build" ]; then
-  rm -rf ./build
-fi
-mkdir ./build && cd ./build
-
-if [ "$1" == "ARM" ]; then
-  cmake -D BUILD_ARM=ON ..
+ # rm -rf ./build
+ echo "Using cached dir build"
 else
-  cmake -D BUILD_ARM=OFF ..
+  mkdir ./build
+fi
+cd ./build
+
+if [ "$1" == "ARM" ] || [ "$1" == "arm" ]; then
+  BUILD_SWITCH=ON
+else
+  BUILD_SWITCH=OFF
 fi
 
+cmake -D BUILD_ARM=$BUILD_SWITCH ..
 make
+
+if [ $BUILD_SWITCH == "ON" ]; then
+  echo "Now run: qemu-arm -L /usr/arm-linux-gnueabi/ ./VM"
+else
+  echo "Now run: ./VM"
+fi
