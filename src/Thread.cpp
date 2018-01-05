@@ -45,7 +45,7 @@ void Thread::refresh(WINDOW *window) {
 
     // add name and code
     auto lines = this->currect_function->toStr();
-    int yPos = 1;
+    unsigned int yPos = 1;
     for(int i = 0; i < maxCodeLinesDisplay && yPos - 1 < lines.size(); yPos++, i++)
         mvwaddstr(window, yPos, 1, lines.at((unsigned long)yPos-1).c_str());
 
@@ -140,8 +140,8 @@ Thread* ThreadManager::getCurrentThread() {
 }
 
 #if DEBUG == 1
-void ThreadManager::refreshThreads(std::vector<WINDOW*> windows, int startThread) {
-    int i = 0;
+void ThreadManager::refreshThreads(std::vector<WINDOW*> windows, unsigned int startThread) {
+    unsigned int i = 0;
     for(; i < windows.size() && i + startThread < this->threads.size(); i++){
         this->threads.at((unsigned long)i + startThread)->refresh(windows.at((unsigned long)i));
     }

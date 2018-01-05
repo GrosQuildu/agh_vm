@@ -44,6 +44,7 @@ public:
      */
     virtual void initialize() = 0;
     virtual Thread* schedule(Thread* current_thread, std::vector<Thread*>& threads);
+    virtual ~ThreadScheduler() {};
 
 protected:
     std::string name;
@@ -85,7 +86,7 @@ public:
     Thread* getCurrentThread();
 
     #if DEBUG == 1
-    void refreshThreads(std::vector<WINDOW*>, int);
+    void refreshThreads(std::vector<WINDOW*>, unsigned int);
     #endif
 
 private:
