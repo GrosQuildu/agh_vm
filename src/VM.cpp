@@ -14,7 +14,7 @@
 bool VM::isInitialized = false;
 FunctionFactory VM::functionFactory;
 ThreadManager VM::threadManager;
-
+std::vector<ThreadScheduler*> VM::threadSchedulers;
 
 int VM::ThreadWinWidth = 50;
 int VM::ThreadWinHeight = 50;
@@ -24,11 +24,16 @@ int VM::ThreadWinMargin = 2;
 std::vector<WINDOW*> VM::windows;
 #endif
 
-void VM::initialize(const std::string& codeDirPath) {
+void VM::initialize(const std::string codeDirPath, const std::string defaultScheduler) {
     if(!VM::isInitialized) {
         VM::functionFactory.initialize(codeDirPath);
-        auto defaultScheduler = new RoundRobinScheduler();
-        VM::threadManager.changeScheduler(defaultScheduler);
+
+        VM::threadSchedulers.push_back(new RoundRobinScheduler());
+        VM::threadSchedulers.push_back(new FIFOScheduler());
+        auto schedulerSet = VM::changeScheduler(defaultScheduler);
+        if(!schedulerSet)
+            throw VMRuntimeException("Scheduler " + defaultScheduler + " not found");
+
         VM::isInitialized = true;
 
         #if DEBUG == 1
@@ -75,6 +80,8 @@ void VM::start() {
 
 void VM::stop() {
     VM::threadManager.clearAll();
+    for(auto it = VM::threadSchedulers.begin(); it != VM::threadSchedulers.end(); it++)
+        delete *it;
     std::cout<<"Virtual Machines stopped\n";
 }
 
@@ -106,13 +113,22 @@ void VM::stopThread(std::string threadName) {
     }
 }
 
-#if DEBUG == 1
-void VM::refresh() {
-    VM::threadManager.refreshThreads(VM::windows, 0);
-    usleep(1 * 1000000);
+bool VM::changeScheduler(std::string schedulerName) {
+    for(auto it = VM::threadSchedulers.begin(); it != VM::threadSchedulers.end(); it++) {
+        if((*it)->getName() == schedulerName) {
+            VM::threadManager.changeScheduler(*it);
+            return true;
+        }
+    }
+    return false;
 }
-#endif
-
 void VM::setSchedulingFrequency(int frequency) {
     VM::functionFactory.setSchedulingFrequency(frequency);
 }
+
+#if DEBUG == 1
+void VM::refresh() {
+    VM::threadManager.refreshThreads(VM::windows, 0);
+    usleep(1 * 100000);
+}
+#endif

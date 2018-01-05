@@ -10,7 +10,8 @@ using namespace std;
 
 int main() {
     cout<<"Start\n";
-    string codeDir = "/home/gros/studia/eaiib_3/wzorce/virtual_machine/example_program/";
-    VM::getVM().initialize(codeDir);
+    auto codeDir = "/home/gros/studia/eaiib_3/wzorce/virtual_machine/example_program/";
+    auto defaultScheduler = "FIFO";
+    VM::getVM().initialize(codeDir, defaultScheduler);
     VM::getVM().start();
 }

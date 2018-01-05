@@ -12,7 +12,7 @@ public:
     /** Initialize virtual machine singleton
      * @param string codePathDir
      */
-    void initialize(const std::string&);
+    void initialize(const std::string, const std::string);
 
     /**
      * Get virtual machine singleton instance
@@ -29,12 +29,14 @@ public:
     static Thread* getNewThread(std::string, std::string);
     static void stopThread(std::string);
 
+    static bool changeScheduler(std::string);
     static void setSchedulingFrequency(int);
 
 private:
     static bool isInitialized;
     static FunctionFactory functionFactory;
     static ThreadManager threadManager;
+    static std::vector<ThreadScheduler*> threadSchedulers;
 
     static int ThreadWinWidth;
     static int ThreadWinHeight;

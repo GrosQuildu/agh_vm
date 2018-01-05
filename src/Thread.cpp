@@ -179,6 +179,10 @@ Thread *ThreadScheduler::schedule(Thread *current_thread, std::vector<Thread *> 
     return nullptr;
 }
 
+std::string ThreadScheduler::getName() {
+    return this->name;
+}
+
 
 FIFOScheduler::FIFOScheduler() : ThreadScheduler("FIFO") {}
 
@@ -190,12 +194,12 @@ void FIFOScheduler::initialize(){
 }
 
 Thread* FIFOScheduler::schedule(Thread* current_thread, std::vector<Thread*>& threads) {
-    if(threads.size() == 0)
-        return nullptr;
-
     auto newThreadIt = ThreadScheduler::schedule(current_thread, threads);
     if(newThreadIt != nullptr)
         return newThreadIt;
+
+    if(threads.size() == 0)
+        return nullptr;
 
     for(auto it = threads.begin(); it != threads.end(); it++) {
         if((*it)->status != THREAD_BLOCKED)
@@ -203,7 +207,6 @@ Thread* FIFOScheduler::schedule(Thread* current_thread, std::vector<Thread*>& th
     }
     throw VMRuntimeException("All threads blocked");
 }
-
 
 RoundRobinScheduler::RoundRobinScheduler() : ThreadScheduler("RoundRobin") {}
 
@@ -233,5 +236,4 @@ Thread* RoundRobinScheduler::schedule(Thread* current_thread, std::vector<Thread
     }
     throw VMRuntimeException("All threads blocked");
 }
-
 

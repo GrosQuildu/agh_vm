@@ -44,6 +44,7 @@ public:
      */
     virtual void initialize() = 0;
     virtual Thread* schedule(Thread* current_thread, std::vector<Thread*>& threads);
+    virtual std::string getName();
     virtual ~ThreadScheduler() {};
 
 protected:
