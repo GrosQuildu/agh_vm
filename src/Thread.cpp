@@ -41,7 +41,7 @@ void Thread::refresh(WINDOW *window) {
     box(window, 0 , 0);
 
     int maxCodeLinesDisplay = 30;
-    int maxArgsDisplay = 20;
+    int maxArgsDisplay = 10;
 
     // add name and code
     auto lines = this->currect_function->toStr();

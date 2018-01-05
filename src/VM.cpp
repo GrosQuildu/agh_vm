@@ -17,11 +17,12 @@ ThreadManager VM::threadManager;
 std::vector<ThreadScheduler*> VM::threadSchedulers;
 
 int VM::ThreadWinWidth = 50;
-int VM::ThreadWinHeight = 50;
+int VM::ThreadWinHeight = 35;
 int VM::ThreadWinMargin = 2;
 
 #if DEBUG == 1
 std::vector<WINDOW*> VM::windows;
+WINDOW* VM::terminal;
 #endif
 
 void VM::initialize(const std::string codeDirPath, const std::string defaultScheduler) {
@@ -59,6 +60,12 @@ void VM::initialize(const std::string codeDirPath, const std::string defaultSche
         for (int i = 0; i < windowsAmount; i++)
             VM::windows.push_back(newwin(VM::ThreadWinHeight, VM::ThreadWinWidth, VM::ThreadWinMargin,
                                              (VM::ThreadWinWidth + VM::ThreadWinMargin) * i + VM::ThreadWinMargin));
+
+        VM::terminal = newwin(LINES - VM::ThreadWinHeight - VM::ThreadWinMargin, COLS - 2*VM::ThreadWinMargin,
+                              VM::ThreadWinHeight + VM::ThreadWinMargin, VM::ThreadWinMargin);
+        box(VM::terminal, 0 , 0);
+        mvwaddstr(VM::terminal, 1, 1, "TERMINAL:");
+        wrefresh(VM::terminal);
         #endif
     }
 }
@@ -122,13 +129,24 @@ bool VM::changeScheduler(std::string schedulerName) {
     }
     return false;
 }
+
 void VM::setSchedulingFrequency(int frequency) {
     VM::functionFactory.setSchedulingFrequency(frequency);
+}
+
+void VM::print(std::string value) {
+    #ifdef DEBUG
+    mvwaddstr(VM::terminal, 3, 1, "");
+    mvwaddstr(VM::terminal, 3, 1, value.c_str());
+    wrefresh(VM::terminal);
+    #else
+    std::cout<<value<<std::endl;
+    #endif
 }
 
 #if DEBUG == 1
 void VM::refresh() {
     VM::threadManager.refreshThreads(VM::windows, 0);
-    usleep(1 * 100000);
+    usleep(1 * 1000000);
 }
 #endif

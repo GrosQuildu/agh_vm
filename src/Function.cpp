@@ -396,7 +396,7 @@ void vm_print() {
     if(arg0.type == VAR)
         val0 = currentFunction->var_table[arg0.valStr];
 
-    std::cout << val0 << "\n";
+    VM::print(std::to_string(val0));
 }
 
 void vm_call(){

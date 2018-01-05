@@ -32,6 +32,8 @@ public:
     static bool changeScheduler(std::string);
     static void setSchedulingFrequency(int);
 
+    static void print(std::string);
+
 private:
     static bool isInitialized;
     static FunctionFactory functionFactory;
@@ -44,6 +46,7 @@ private:
 
     #if DEBUG == 1
     static std::vector<WINDOW*> windows;
+    static WINDOW* terminal;
     static void refresh();
     #endif
 };
