@@ -16,7 +16,7 @@ FunctionFactory VM::functionFactory;
 ThreadManager VM::threadManager;
 std::vector<ThreadScheduler*> VM::threadSchedulers;
 
-int VM::ThreadWinWidth = 50;
+int VM::ThreadWinWidth = 30;
 int VM::ThreadWinHeight = 35;
 int VM::ThreadWinMargin = 2;
 
@@ -135,7 +135,7 @@ void VM::setSchedulingFrequency(int frequency) {
 }
 
 void VM::print(std::string value) {
-    #ifdef DEBUG
+    #if DEBUG == 1
     mvwaddstr(VM::terminal, 3, 1, "");
     mvwaddstr(VM::terminal, 3, 1, value.c_str());
     wrefresh(VM::terminal);
