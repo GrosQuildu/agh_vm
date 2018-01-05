@@ -3,8 +3,11 @@
 //
 
 
-#include "VM.h"
+#if DEBUG == 1
 #include <ncurses.h>
+#endif
+
+#include "VM.h"
 #include <unistd.h>
 
 
@@ -12,11 +15,14 @@ bool VM::isInitialized = false;
 FunctionFactory VM::functionFactory;
 ThreadManager VM::threadManager;
 
-bool VM::DEBUG = true;
+
 int VM::ThreadWinWidth = 50;
 int VM::ThreadWinHeight = 50;
 int VM::ThreadWinMargin = 2;
+
+#if DEBUG == 1
 std::vector<WINDOW*> VM::windows;
+#endif
 
 void VM::initialize(const std::string& codeDirPath) {
     if(!VM::isInitialized) {
@@ -25,30 +31,30 @@ void VM::initialize(const std::string& codeDirPath) {
         VM::threadManager.changeScheduler(defaultScheduler);
         VM::isInitialized = true;
 
-        if(VM::DEBUG) {
-            initscr();
-            cbreak();
-            nodelay(stdscr, TRUE);
-            keypad(stdscr, FALSE);
-            noecho();
+        #if DEBUG == 1
+        initscr();
+        cbreak();
+        nodelay(stdscr, TRUE);
+        keypad(stdscr, FALSE);
+        noecho();
 
-            start_color();
-            init_pair(1, COLOR_MAGENTA, COLOR_BLACK);
-            init_pair(2, COLOR_CYAN, COLOR_BLACK);
-            init_pair(3, COLOR_GREEN, COLOR_BLACK);
-            init_pair(4, COLOR_WHITE, COLOR_BLACK);
-            init_pair(5, COLOR_BLUE, COLOR_BLACK);
-            init_pair(6, COLOR_YELLOW, COLOR_BLACK);
-            init_pair(7, COLOR_RED, COLOR_BLACK);
+        start_color();
+        init_pair(1, COLOR_MAGENTA, COLOR_BLACK);
+        init_pair(2, COLOR_CYAN, COLOR_BLACK);
+        init_pair(3, COLOR_GREEN, COLOR_BLACK);
+        init_pair(4, COLOR_WHITE, COLOR_BLACK);
+        init_pair(5, COLOR_BLUE, COLOR_BLACK);
+        init_pair(6, COLOR_YELLOW, COLOR_BLACK);
+        init_pair(7, COLOR_RED, COLOR_BLACK);
 
 
-            int windowsAmount = COLS / (VM::ThreadWinWidth + VM::ThreadWinMargin);
-            if (windowsAmount * (VM::ThreadWinWidth + VM::ThreadWinMargin) + VM::ThreadWinMargin > COLS)
-                windowsAmount--;
-            for (int i = 0; i < windowsAmount; i++)
-                VM::windows.push_back(newwin(VM::ThreadWinHeight, VM::ThreadWinWidth, VM::ThreadWinMargin,
+        int windowsAmount = COLS / (VM::ThreadWinWidth + VM::ThreadWinMargin);
+        if (windowsAmount * (VM::ThreadWinWidth + VM::ThreadWinMargin) + VM::ThreadWinMargin > COLS)
+            windowsAmount--;
+        for (int i = 0; i < windowsAmount; i++)
+            VM::windows.push_back(newwin(VM::ThreadWinHeight, VM::ThreadWinWidth, VM::ThreadWinMargin,
                                              (VM::ThreadWinWidth + VM::ThreadWinMargin) * i + VM::ThreadWinMargin));
-        }
+        #endif
     }
 }
 
@@ -73,8 +79,9 @@ void VM::stop() {
 }
 
 Function* VM::getCurrentFunction() {
-    if(VM::DEBUG)
-        VM::refresh();
+    #if DEBUG == 1
+    VM::refresh();
+    #endif
     return VM::threadManager.getCurrentFunction();
 }
 
@@ -99,10 +106,12 @@ void VM::stopThread(std::string threadName) {
     }
 }
 
+#if DEBUG == 1
 void VM::refresh() {
     VM::threadManager.refreshThreads(VM::windows, 0);
     usleep(1 * 1000000);
 }
+#endif
 
 void VM::setSchedulingFrequency(int frequency) {
     VM::functionFactory.setSchedulingFrequency(frequency);

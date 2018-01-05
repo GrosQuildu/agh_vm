@@ -35,6 +35,7 @@ void Thread::run() {
     }
 }
 
+#if DEBUG == 1
 void Thread::refresh(WINDOW *window) {
     wclear(window);
     box(window, 0 , 0);
@@ -76,7 +77,7 @@ void Thread::refresh(WINDOW *window) {
 
     wrefresh(window);
 }
-
+#endif
 
 
 ThreadManager::ThreadManager() {
@@ -138,6 +139,7 @@ Thread* ThreadManager::getCurrentThread() {
     return this->current_thread;
 }
 
+#if DEBUG == 1
 void ThreadManager::refreshThreads(std::vector<WINDOW*> windows, int startThread) {
     int i = 0;
     for(; i < windows.size() && i + startThread < this->threads.size(); i++){
@@ -148,7 +150,7 @@ void ThreadManager::refreshThreads(std::vector<WINDOW*> windows, int startThread
         wrefresh(windows.at((unsigned long)i));
     }
 }
-
+#endif
 
 
 

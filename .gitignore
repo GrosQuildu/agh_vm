@@ -1,3 +1,5 @@
 *.pyc
 .idea
 cmake-build-debug/*
+build
+VM

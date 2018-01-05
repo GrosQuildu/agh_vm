@@ -5,10 +5,13 @@
 #ifndef VM_THREAD_H
 #define VM_THREAD_H
 
+#if DEBUG == 1
+#include <ncurses.h>
+#endif
 
 #include "Function.h"
 #include "Exceptions.h"
-#include <ncurses.h>
+
 
 const char THREAD_READY = 0;
 const char THREAD_BLOCKED = 1;
@@ -26,7 +29,9 @@ public:
     std::vector<int> recv_table;
     bool reshedule;
 
+    #if DEBUG == 1
     void refresh(WINDOW*);
+    #endif
 };
 
 
@@ -79,7 +84,9 @@ public:
     Function* getCurrentFunction();
     Thread* getCurrentThread();
 
+    #if DEBUG == 1
     void refreshThreads(std::vector<WINDOW*>, int);
+    #endif
 
 private:
     std::vector<Thread*> threads;

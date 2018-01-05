@@ -36,12 +36,14 @@ private:
     static FunctionFactory functionFactory;
     static ThreadManager threadManager;
 
-    static bool DEBUG;
     static int ThreadWinWidth;
     static int ThreadWinHeight;
     static int ThreadWinMargin;
+
+    #if DEBUG == 1
     static std::vector<WINDOW*> windows;
     static void refresh();
+    #endif
 };
 
 
