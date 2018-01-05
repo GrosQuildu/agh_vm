@@ -329,7 +329,6 @@ Function::~Function() {
 }
 
 void Function::run() {
-    std::cout << *this << std::endl;
     while(this->vpc != this->dtt->end() && !this->anotherFunctionCalled)
         (*this->vpc++)();
 }
