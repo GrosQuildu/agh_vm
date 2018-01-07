@@ -30,7 +30,7 @@ public:
     static void stopThread(std::string);
 
     static bool changeScheduler(std::string);
-    static void setSchedulingFrequency(int);
+    static void setMaxBlockSize(unsigned long);
 
     static void print(std::string);
 

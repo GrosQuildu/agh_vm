@@ -130,8 +130,8 @@ bool VM::changeScheduler(std::string schedulerName) {
     return false;
 }
 
-void VM::setSchedulingFrequency(int frequency) {
-    VM::functionFactory.setSchedulingFrequency(frequency);
+void VM::setMaxBlockSize(unsigned long maxBlockSize) {
+    VM::functionFactory.setMaxBlockSize(maxBlockSize);
 }
 
 void VM::print(std::string value) {

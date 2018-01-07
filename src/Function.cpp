@@ -4,8 +4,11 @@
 
 #include "Function.h"
 #include "VM.h"
+#include <sys/mman.h>
+#include <cstring>
 
-const std::string const2str(char c) {
+
+const std::string const2str(unsigned char c) {
     switch(c) {
         case 0:
             return "VAR";
@@ -23,7 +26,7 @@ const std::string const2str(char c) {
 }
 
 
-
+/* FunctionFactory Start */
 dtt_arg FunctionFactory::parse_load(std::string line, int arg_table_size, std::map<std::string, int> &var_table) {
     std::string bytecode;
     std::string bytecode_arg;
@@ -72,7 +75,7 @@ dtt_arg FunctionFactory::parse_load(std::string line, int arg_table_size, std::m
 }
 
 std::pair<bool, int> FunctionFactory::check_instruction(std::string line, std::vector<dtt_arg> &dtt_args_vector, int arg_counter) {
-    std::vector<std::set<char>> &required_args = bytecodeMapping.at(line).second;
+    std::vector<std::set<unsigned char>> &required_args = bytecodeMapping.at(line).second;
     auto argToCheck = dtt_args_vector.end() - arg_counter;
     bool unknownNumberOfArguments = false;
     int argumentsChecked = 0;
@@ -98,7 +101,8 @@ std::pair<bool, int> FunctionFactory::check_instruction(std::string line, std::v
     return std::make_pair(unknownNumberOfArguments, argumentsChecked);
 }
 
-std::pair<FunctionPrototype*, std::forward_list<std::tuple<std::string, int, int>>> FunctionFactory::parseCode(std::string codePath) {
+std::pair<FunctionPrototype*, std::forward_list<std::tuple<std::string, int, int>>>
+FunctionFactory::parseCode(std::string codePath) {
     bool endReached = false;
     std::string line;
     std::ifstream codeFile(codePath);
@@ -147,7 +151,7 @@ std::pair<FunctionPrototype*, std::forward_list<std::tuple<std::string, int, int
     }
 
     // bytecodes
-    std::vector<dtt_func> dtt_vector;
+    std::vector<unsigned char> *dtt = new std::vector<unsigned char>;
     std::vector<dtt_arg> dtt_args_vector;
     std::string bytecode;
     std::string bytecode_arg;
@@ -167,8 +171,8 @@ std::pair<FunctionPrototype*, std::forward_list<std::tuple<std::string, int, int
             } else if(line == "END") {
                 endReached = true;
             // PARSE DEFINE
-            } else if(startswith(line, "DEFINE")) {
-                throw ParserException("Variables definitions can appear only at the beginning og the function");
+            } else if(startswith(line, "DECLARE")) {
+                throw ParserException("Variables definitions can appear only at the beginning of the function");
             // PARSE OTHERS
             } else if(bytecodeMapping.find(line) != bytecodeMapping.end()) {
                 auto instructionChecked = check_instruction(line, dtt_args_vector, arg_counter);
@@ -181,7 +185,7 @@ std::pair<FunctionPrototype*, std::forward_list<std::tuple<std::string, int, int
                                                                       arg_counter - argumentsChecked));
                 }
                 arg_counter = 0;
-                dtt_vector.push_back(bytecodeMapping.at(line).first);
+                dtt->push_back(bytecodeMapping.at(line).first);
             } else {
                 throw ParserException("Unknown bytecode: " + line);
             }
@@ -192,7 +196,6 @@ std::pair<FunctionPrototype*, std::forward_list<std::tuple<std::string, int, int
     if(!endReached)
         throw ParserException("END not fund");
 
-    std::forward_list<dtt_func>* dtt = new std::forward_list<dtt_func>(dtt_vector.begin(), dtt_vector.end());
     std::forward_list<dtt_arg>* dtt_args = new std::forward_list<dtt_arg>(dtt_args_vector.begin(), dtt_args_vector.end());
 
     return std::make_pair(new FunctionPrototype(name, dtt, dtt_args, arg_table_size, var_table), calledFunctionsToCheck);
@@ -229,7 +232,7 @@ void FunctionFactory::initialize(std::string codeDirPath) {
 
     for(auto it = calledFunctionsToCheck.begin(); it != calledFunctionsToCheck.end(); it++) {
         std::string functionToCheckName = std::get<0>(*it);
-        int functionArgumentsStartPosition = std::get<1>(*it);
+//        int functionArgumentsStartPosition = std::get<1>(*it);
         int functionArgumentsCount = std::get<2>(*it);
 
         if(!this->haveFunction(functionToCheckName))
@@ -258,17 +261,16 @@ bool FunctionFactory::haveFunction(std::string functionPrototypeName) {
     return this->functionsPrototypes.find(functionPrototypeName) != this->functionsPrototypes.end();
 }
 
-void FunctionFactory::setSchedulingFrequency(int frequency) {
+void FunctionFactory::setMaxBlockSize(unsigned long maxBlockSize) {
     for(auto it = this->functionsPrototypes.begin(); it != this->functionsPrototypes.end(); it++) {
-        if(frequency == 0)
-            (*it).second->clearSchedulingBytecodes();
-        else
-            (*it).second->setSchedulingBytecodes(frequency);
+        (*it).second->maxInstructionsInBlock = maxBlockSize;
     }
 }
+/* FunctionFactory End*/
 
 
-FunctionPrototype::FunctionPrototype(std::string name, std::forward_list<dtt_func>* dtt,
+/* FunctionPrototype Start */
+FunctionPrototype::FunctionPrototype(std::string name, std::vector<unsigned char>* dtt,
                                      std::forward_list<dtt_arg>* dtt_args, int arg_table_size,
                                      std::map<std::string,int>var_table) {
     this->name = name;
@@ -276,38 +278,27 @@ FunctionPrototype::FunctionPrototype(std::string name, std::forward_list<dtt_fun
     this->dtt_args = dtt_args;
     this->arg_table_size = arg_table_size;
     this->var_table = var_table;
+    this->jit = new std::map<unsigned long, void(*)()>;
+    this->maxInstructionsInBlock = 0;
 }
 
 FunctionPrototype::~FunctionPrototype() {
     delete this->dtt;
     delete this->dtt_args;
+    delete this->jit;
+
     this->dtt = nullptr;
     this->dtt_args = nullptr;
+    this->jit = nullptr;
 }
 
 Function* FunctionPrototype::generate() {
     return new Function(*this);
 }
-
-void FunctionPrototype::setSchedulingBytecodes(int frequency) {
-    if(frequency <= 1)
-        throw VMRuntimeException("Schedule bytecode frequency must be greater than 1");
-    dtt_func blockingBytecodes[] {vm_schedule, vm_call, vm_return, vm_recv, vm_join};
-    auto it = this->dtt->begin();
-    while(it != this->dtt->end()) {
-        for (int i = 0; i < frequency - 1 && it != this->dtt->end(); i++, it++);
-        // do not set vm_schedule after bytecode that may loose control
-        if(it != this->dtt->end() && std::find(std::begin(blockingBytecodes), std::end(blockingBytecodes), *it) == std::end(blockingBytecodes))
-            this->dtt->insert_after(it, &vm_schedule);
-    }
-}
-
-void FunctionPrototype::clearSchedulingBytecodes() {
-    this->dtt->remove(vm_schedule);
-}
+/* FunctionPrototype End*/
 
 
-
+/* Function Start */
 Function::Function(FunctionPrototype& functionPrototype) {
     this->name = functionPrototype.name;
     this->dtt = functionPrototype.dtt;
@@ -316,25 +307,35 @@ Function::Function(FunctionPrototype& functionPrototype) {
     this->arg_table_size = functionPrototype.arg_table_size;
     this->var_table = functionPrototype.var_table;
 
-    this->vpc = this->dtt->begin();
+    this->vpc = 0;
 
     this->anotherFunctionCalled = false;
     this->returnFunction = nullptr;
     this->return_variable = "";
+
+    this->jit = functionPrototype.jit;
+    this->maxInstructionsInBlock = &functionPrototype.maxInstructionsInBlock;
 }
 
 Function::~Function() {
     delete this->dtt_args;
     this->dtt_args = nullptr;
+    this->maxInstructionsInBlock = nullptr;
 }
 
 void Function::run() {
-    while(this->vpc != this->dtt->end() && !this->anotherFunctionCalled)
-        (*this->vpc++)();
+    if(this->jit->find(this->vpc) != this->jit->end()) {
+        this->jit->at(this->vpc)();
+    } else {
+        dtt_func compiled = this->compile();
+        compiled();
+    }
+//    while(this->vpc < this->dtt->si && !this->anotherFunctionCalled)
+//        this->dtt[this->vpc++]();
 }
 
-dtt_arg& Function::getNextArg() {
-    dtt_arg& nextArg = this->dtt_args->front();
+dtt_arg* Function::getNextArg() {
+    dtt_arg* nextArg = &this->dtt_args->front();
     this->dtt_args->pop_front();
     return nextArg;
 }
@@ -369,52 +370,140 @@ void Function::setArguments(std::vector<int> arguments) {
     }
 }
 
+dtt_func Function::compile() {
+    const unsigned int maxBlockLength = 4096;
+    char* startCompiledBlock = (char *)mmap(NULL, maxBlockLength, PROT_READ | PROT_WRITE,
+                                            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if(startCompiledBlock == MAP_FAILED)
+        throw VMRuntimeException("Can't mmap memory, error: " + std::string(strerror(errno)));
 
-void vm_schedule() {
-    auto currentFunction = VM::getCurrentFunction();
-    currentFunction->anotherFunctionCalled = true;
+    unsigned long instructionsCompiled = 0;
+    char* endCompiledBlock = startCompiledBlock;
+    typedef std::string (*bc)();
+    bc bytecodes[] = {vm_prolog, vm_assign, vm_print, vm_add, vm_epilog};
 
-    VM::getCurrentThread()->reshedule = true;
+
+    std::string codePart = bytecodes[0]();
+    auto toAddSize = codePart.size();
+    memcpy(endCompiledBlock, codePart.c_str(), toAddSize);
+    endCompiledBlock += toAddSize;
+
+    while(this->vpc < this->dtt->size()) {
+        if(*this->maxInstructionsInBlock != 0 && instructionsCompiled > *this->maxInstructionsInBlock)
+            break;
+//        size_t toAddSize = (char*)bytecodes[this->dtt->at(this->vpc)] - (char*)bytecodes[this->dtt->at(this->vpc)-1];
+        std::string codePart = bytecodes[this->dtt->at(this->vpc)]();
+        auto toAddSize = codePart.size();
+        if(endCompiledBlock + toAddSize - startCompiledBlock > maxBlockLength)
+            break;
+
+//        memcpy(endCompiledBlock, bytecodes[this->dtt->at(this->vpc)], toAddSize);
+        memcpy(endCompiledBlock, codePart.c_str(), toAddSize);
+        endCompiledBlock += toAddSize;
+        this->vpc++;
+        instructionsCompiled++;
+    }
+    int mprotectSuccess = mprotect(startCompiledBlock, endCompiledBlock - startCompiledBlock, PROT_READ | PROT_EXEC);
+    if(mprotectSuccess != 0)
+        throw VMRuntimeException("Can't mprotect memory, error: " + std::string(strerror(errno)));
+
+    this->jit->insert(std::make_pair(this->vpc, (dtt_func)startCompiledBlock));
+    return (dtt_func)startCompiledBlock;
 }
+/* Function End */
 
-void vm_assign(){
+std::string vm_prolog() {
+    code_start:
     auto currentFunction = VM::getCurrentFunction();
-    auto arg0 = currentFunction->getNextArg();
-    auto arg1 = currentFunction->getNextArg();
+    dtt_arg *arg0;
+    dtt_arg *arg1;
+    dtt_arg *arg2;
+    int val0, val1, val2;
+    code_end:;
 
-    int val1 = arg1.valInt;
-    if(arg1.type == VAR)
-        val1 = currentFunction->var_table[arg1.valStr];
+    int codeSize = (char*)&&code_end - (char*)vm_prolog;
+    char *code = new char[codeSize];
+    memcpy(code, (char*)vm_prolog, codeSize);
+    auto codeStr = std::string(code);
+    delete code;
+    return codeStr;
+}
+std::string vm_epilog() {
 
-    currentFunction->var_table[arg0.valStr] = val1;
+}
+void vm_schedule() {}
+
+std::string vm_assign(){
+    auto currentFunction = VM::getCurrentFunction();
+    dtt_arg *arg0;
+    dtt_arg *arg1;
+    dtt_arg *arg2;
+    int val0, val1, val2;
+
+    int codeSize = (char*)&&code_end - (char*)&&code_start;
+    char *code = new char[codeSize];
+    memcpy(code, &&code_start, codeSize);
+    auto codeStr = std::string(code);
+    delete code;
+    if(1)
+        goto code_end;
+
+    code_start:
+    arg0 = currentFunction->getNextArg();
+    arg1 = currentFunction->getNextArg();
+
+    val1 = arg1->valInt;
+    if(arg1->type == VAR)
+        val1 = currentFunction->var_table[arg1->valStr];
+
+    currentFunction->var_table[arg0->valStr] = val1;
+    code_end:;
+
+    return codeStr;
 };
-void vm_print() {
+std::string vm_print() {
     auto currentFunction = VM::getCurrentFunction();
-    auto arg0 = currentFunction->getNextArg();
+    dtt_arg *arg0;
+    dtt_arg *arg1;
+    dtt_arg *arg2;
+    int val0, val1, val2;
 
-    int val0 = arg0.valInt;
-    if(arg0.type == VAR)
-        val0 = currentFunction->var_table[arg0.valStr];
+    int codeSize = (char*)&&code_end - (char*)&&code_start;
+    char *code = new char[codeSize];
+    memcpy(code, &&code_start, codeSize);
+    auto codeStr = std::string(code);
+    delete code;
+    goto code_end;
+
+    code_start:
+    arg0 = currentFunction->getNextArg();
+
+    val0 = arg0->valInt;
+    if(arg0->type == VAR)
+        val0 = currentFunction->var_table[arg0->valStr];
 
     VM::print(std::to_string(val0));
+    code_end:;
+
+    return codeStr;
 }
 
-void vm_call(){
+void vm_call() {
     auto currentFunction = VM::getCurrentFunction();
     auto arg0 = currentFunction->getNextArg();
     auto arg1 = currentFunction->getNextArg();
 
     currentFunction->anotherFunctionCalled = true;
-    currentFunction->return_variable = arg1.valStr;
+    currentFunction->return_variable = arg1->valStr;
 
-    auto newFunction = VM::getNewFunction(arg0.valStr);
+    auto newFunction = VM::getNewFunction(arg0->valStr);
     std::vector<int> newFunctionArgs;
 
     for (int i = 0; i < newFunction->arg_table_size; ++i) {
         auto valArg = currentFunction->getNextArg();
-        int valNext = valArg.valInt;
-        if(valArg.type == VAR)
-            valNext = currentFunction->var_table[valArg.valStr];
+        int valNext = valArg->valInt;
+        if(valArg->type == VAR)
+            valNext = currentFunction->var_table[valArg->valStr];
         newFunctionArgs.push_back(valNext);
     }
 
@@ -427,9 +516,9 @@ void vm_return(){
     auto currentFunction = VM::getCurrentFunction();
     auto arg0 = currentFunction->getNextArg();
 
-    int val0 = arg0.valInt;
-    if(arg0.type == VAR)
-        val0 = currentFunction->var_table[arg0.valStr];
+    int val0 = arg0->valInt;
+    if(arg0->type == VAR)
+        val0 = currentFunction->var_table[arg0->valStr];
 
     if(currentFunction->returnFunction != nullptr) {
         currentFunction->returnFunction->var_table[currentFunction->returnFunction->return_variable] = val0;
@@ -446,14 +535,14 @@ void vm_start(){
     auto arg0 = currentFunction->getNextArg();
     auto arg1 = currentFunction->getNextArg();
 
-    auto newThread = VM::getNewThread(arg1.valStr, arg0.valStr);
+    auto newThread = VM::getNewThread(arg1->valStr, arg0->valStr);
 
     std::vector<int> newFunctionArgs;
     for (int i = 0; i < newThread->currect_function->arg_table_size; ++i) {
         auto valArg = currentFunction->getNextArg();
-        int valNext = valArg.valInt;
-        if(valArg.type == VAR)
-            valNext = currentFunction->var_table[valArg.valStr];
+        int valNext = valArg->valInt;
+        if(valArg->type == VAR)
+            valNext = currentFunction->var_table[valArg->valStr];
         newFunctionArgs.push_back(valNext);
     }
 
@@ -466,24 +555,40 @@ void vm_stop(){
     auto currentFunction = VM::getCurrentFunction();
     auto arg0 = currentFunction->getNextArg();
 
-    VM::stopThread(arg0.valStr);
+    VM::stopThread(arg0->valStr);
 };
 
-void vm_add() {
+std::string vm_add() {
     auto currentFunction = VM::getCurrentFunction();
-    auto arg0 = currentFunction->getNextArg();
-    auto arg1 = currentFunction->getNextArg();
-    auto arg2 = currentFunction->getNextArg();
+    dtt_arg *arg0;
+    dtt_arg *arg1;
+    dtt_arg *arg2;
+    int val0, val1, val2;
 
-    int val1 = arg1.valInt;
-    if(arg1.type == VAR)
-        val1 = currentFunction->var_table[arg1.valStr];
+    int codeSize = (char*)&&code_end - (char*)&&code_start;
+    char *code = new char[codeSize];
+    memcpy(code, &&code_start, codeSize);
+    auto codeStr = std::string(code);
+    delete code;
+    goto code_end;
 
-    int val2 = arg2.valInt;
-    if(arg2.type == VAR)
-        val2 = currentFunction->var_table[arg2.valStr];
+    code_start:
+    arg0 = currentFunction->getNextArg();
+    arg1 = currentFunction->getNextArg();
+    arg2 = currentFunction->getNextArg();
 
-    currentFunction->var_table[arg0.valStr] = val1 + val2;
+    val1 = arg1->valInt;
+    if(arg1->type == VAR)
+        val1 = currentFunction->var_table[arg1->valStr];
+
+    val2 = arg2->valInt;
+    if(arg2->type == VAR)
+        val2 = currentFunction->var_table[arg2->valStr];
+
+    currentFunction->var_table[arg0->valStr] = val1 + val2;
+    code_end:;
+
+    return codeStr;
 }
 void vm_sub() {
     auto currentFunction = VM::getCurrentFunction();
@@ -491,15 +596,15 @@ void vm_sub() {
     auto arg1 = currentFunction->getNextArg();
     auto arg2 = currentFunction->getNextArg();
 
-    int val1 = arg1.valInt;
-    if(arg1.type == VAR)
-        val1 = currentFunction->var_table[arg1.valStr];
+    int val1 = arg1->valInt;
+    if(arg1->type == VAR)
+        val1 = currentFunction->var_table[arg1->valStr];
 
-    int val2 = arg2.valInt;
-    if(arg2.type == VAR)
-        val2 = currentFunction->var_table[arg2.valStr];
+    int val2 = arg2->valInt;
+    if(arg2->type == VAR)
+        val2 = currentFunction->var_table[arg2->valStr];
 
-    currentFunction->var_table[arg0.valStr] = val1 - val2;
+    currentFunction->var_table[arg0->valStr] = val1 - val2;
 };
 void vm_div() {
     auto currentFunction = VM::getCurrentFunction();
@@ -507,15 +612,15 @@ void vm_div() {
     auto arg1 = currentFunction->getNextArg();
     auto arg2 = currentFunction->getNextArg();
 
-    int val1 = arg1.valInt;
-    if(arg1.type == VAR)
-        val1 = currentFunction->var_table[arg1.valStr];
+    int val1 = arg1->valInt;
+    if(arg1->type == VAR)
+        val1 = currentFunction->var_table[arg1->valStr];
 
-    int val2 = arg2.valInt;
-    if(arg2.type == VAR)
-        val2 = currentFunction->var_table[arg2.valStr];
+    int val2 = arg2->valInt;
+    if(arg2->type == VAR)
+        val2 = currentFunction->var_table[arg2->valStr];
 
-    currentFunction->var_table[arg0.valStr] = val1 / val2;
+    currentFunction->var_table[arg0->valStr] = val1 / val2;
 };
 void vm_mul() {
     auto currentFunction = VM::getCurrentFunction();
@@ -523,14 +628,14 @@ void vm_mul() {
     auto arg1 = currentFunction->getNextArg();
     auto arg2 = currentFunction->getNextArg();
 
-    int val1 = arg1.valInt;
-    if(arg1.type == VAR)
-        val1 = currentFunction->var_table[arg1.valStr];
+    int val1 = arg1->valInt;
+    if(arg1->type == VAR)
+        val1 = currentFunction->var_table[arg1->valStr];
 
-    int val2 = arg2.valInt;
-    if(arg2.type == VAR)
-        val2 = currentFunction->var_table[arg2.valStr];
+    int val2 = arg2->valInt;
+    if(arg2->type == VAR)
+        val2 = currentFunction->var_table[arg2->valStr];
 
-    currentFunction->var_table[arg0.valStr] = val1 * val2;
+    currentFunction->var_table[arg0->valStr] = val1 * val2;
 };
 

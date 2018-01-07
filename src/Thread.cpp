@@ -6,6 +6,7 @@
 #include "VM.h"
 
 
+/* Thread Start */
 Thread::Thread(std::string name, Function *currect_function) {
     this->name = name;
     this->currect_function = currect_function;
@@ -78,8 +79,10 @@ void Thread::refresh(WINDOW *window) {
     wrefresh(window);
 }
 #endif
+/* Thread End */
 
 
+/* ThreadManager Start */
 ThreadManager::ThreadManager() {
     this->scheduler = nullptr;
     this->current_thread = nullptr;
@@ -151,9 +154,10 @@ void ThreadManager::refreshThreads(std::vector<WINDOW*> windows, unsigned int st
     }
 }
 #endif
+/* ThreadManager End */
 
 
-
+/* ThreadScheduler Start */
 Thread *ThreadScheduler::schedule(Thread *current_thread, std::vector<Thread *> &threads) {
     if(threads.size() == 0)
         throw VMRuntimeException("Scheduling without any thread");
@@ -188,7 +192,7 @@ FIFOScheduler::FIFOScheduler() : ThreadScheduler("FIFO") {}
 
 void FIFOScheduler::initialize(){
     if(!this->initialized) {
-        VM::setSchedulingFrequency(0);
+        VM::setMaxBlockSize(0);
         this->initialized = true;
     }
 }
@@ -212,7 +216,7 @@ RoundRobinScheduler::RoundRobinScheduler() : ThreadScheduler("RoundRobin") {}
 
 void RoundRobinScheduler::initialize() {
     if(!this->initialized) {
-        VM::setSchedulingFrequency(5);
+        VM::setMaxBlockSize(5);
         this->initialized = true;
     }
 }
@@ -236,4 +240,4 @@ Thread* RoundRobinScheduler::schedule(Thread* current_thread, std::vector<Thread
     }
     throw VMRuntimeException("All threads blocked");
 }
-
+/* ThreadScheduler End */
