@@ -371,6 +371,38 @@ void Function::setArguments(std::vector<int> arguments) {
 }
 
 dtt_func Function::compile() {
+    std::string block;
+    unsigned long instructionsCompiled = 0;
+    typedef std::string (*bc)();
+    bc bytecodes[] = {vm_prolog, vm_assign, vm_print, vm_add, vm_epilog};
+
+    block += bytecodes[0]();
+
+    while(this->vpc < this->dtt->size()) {
+        if(*this->maxInstructionsInBlock != 0 && instructionsCompiled > *this->maxInstructionsInBlock)
+            break;
+        block += bytecodes[this->dtt->at(this->vpc)]();
+        this->vpc++;
+        instructionsCompiled++;
+    }
+
+    char* startCompiledBlock = (char *)mmap(NULL, block.size(), PROT_READ | PROT_WRITE,
+                                            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if(startCompiledBlock == MAP_FAILED)
+        throw VMRuntimeException("Can't mmap memory, error: " + std::string(strerror(errno)));
+
+    memcpy(startCompiledBlock, block.c_str(), block.size());
+
+    int mprotectSuccess = mprotect(startCompiledBlock, block.size(), PROT_READ | PROT_EXEC);
+    if(mprotectSuccess != 0)
+        throw VMRuntimeException("Can't mprotect memory, error: " + std::string(strerror(errno)));
+
+    this->jit->insert(std::make_pair(this->vpc, (dtt_func)startCompiledBlock));
+    return (dtt_func)startCompiledBlock;
+}
+
+/*
+dtt_func Function::compile() {
     const unsigned int maxBlockLength = 4096;
     char* startCompiledBlock = (char *)mmap(NULL, maxBlockLength, PROT_READ | PROT_WRITE,
                                             MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
@@ -410,6 +442,7 @@ dtt_func Function::compile() {
     this->jit->insert(std::make_pair(this->vpc, (dtt_func)startCompiledBlock));
     return (dtt_func)startCompiledBlock;
 }
+ */
 /* Function End */
 
 std::string vm_prolog() {
