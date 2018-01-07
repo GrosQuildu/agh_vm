@@ -447,19 +447,15 @@ dtt_func Function::compile() {
 
 std::string vm_prolog() {
     code_start:
-    auto currentFunction = VM::getCurrentFunction();
+    auto currentFunctionCal = VM::getCurrentFunction;
+    auto currentFunction = currentFunctionCal();
     dtt_arg *arg0;
     dtt_arg *arg1;
     dtt_arg *arg2;
     int val0, val1, val2;
     code_end:;
 
-    int codeSize = (char*)&&code_end - (char*)vm_prolog;
-    char *code = new char[codeSize];
-    memcpy(code, (char*)vm_prolog, codeSize);
-    auto codeStr = std::string(code);
-    delete code;
-    return codeStr;
+    return std::string(reinterpret_cast<const char*>(vm_prolog), reinterpret_cast<const char*>(&&code_end));
 }
 std::string vm_epilog() {
 
@@ -467,18 +463,14 @@ std::string vm_epilog() {
 void vm_schedule() {}
 
 std::string vm_assign(){
-    auto currentFunction = VM::getCurrentFunction();
+    Function* currentFunction;
     dtt_arg *arg0;
     dtt_arg *arg1;
     dtt_arg *arg2;
     int val0, val1, val2;
 
-    int codeSize = (char*)&&code_end - (char*)&&code_start;
-    char *code = new char[codeSize];
-    memcpy(code, &&code_start, codeSize);
-    auto codeStr = std::string(code);
-    delete code;
-    if(1)
+    auto codeStr = std::string(reinterpret_cast<const char*>(&&code_start), reinterpret_cast<const char*>(&&code_end));
+    if(codeStr.size() != 0)
         goto code_end;
 
     code_start:
@@ -495,18 +487,13 @@ std::string vm_assign(){
     return codeStr;
 };
 std::string vm_print() {
-    auto currentFunction = VM::getCurrentFunction();
+    Function* currentFunction;
     dtt_arg *arg0;
     dtt_arg *arg1;
     dtt_arg *arg2;
     int val0, val1, val2;
 
-    int codeSize = (char*)&&code_end - (char*)&&code_start;
-    char *code = new char[codeSize];
-    memcpy(code, &&code_start, codeSize);
-    auto codeStr = std::string(code);
-    delete code;
-    goto code_end;
+    return std::string(reinterpret_cast<const char*>(&&code_start), reinterpret_cast<const char*>(&&code_end));
 
     code_start:
     arg0 = currentFunction->getNextArg();
@@ -517,8 +504,6 @@ std::string vm_print() {
 
     VM::print(std::to_string(val0));
     code_end:;
-
-    return codeStr;
 }
 
 void vm_call() {
@@ -592,19 +577,13 @@ void vm_stop(){
 };
 
 std::string vm_add() {
-    auto currentFunction = VM::getCurrentFunction();
+    Function* currentFunction;
     dtt_arg *arg0;
     dtt_arg *arg1;
     dtt_arg *arg2;
     int val0, val1, val2;
 
-    int codeSize = (char*)&&code_end - (char*)&&code_start;
-    char *code = new char[codeSize];
-    memcpy(code, &&code_start, codeSize);
-    auto codeStr = std::string(code);
-    delete code;
-    goto code_end;
-
+    return std::string(reinterpret_cast<const char*>(&&code_start), reinterpret_cast<const char*>(&&code_end));
     code_start:
     arg0 = currentFunction->getNextArg();
     arg1 = currentFunction->getNextArg();
@@ -620,8 +599,6 @@ std::string vm_add() {
 
     currentFunction->var_table[arg0->valStr] = val1 + val2;
     code_end:;
-
-    return codeStr;
 }
 void vm_sub() {
     auto currentFunction = VM::getCurrentFunction();

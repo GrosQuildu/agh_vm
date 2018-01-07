@@ -38,11 +38,11 @@ const unsigned char THREAD = 4;
 
 const std::string const2str(unsigned char);
 
-static std::string vm_prolog();
-static std::string vm_epilog();
-static void vm_schedule();
-static std::string vm_assign();
-static std::string vm_print();
+std::string vm_prolog();
+std::string vm_epilog();
+void vm_schedule();
+std::string vm_assign();
+std::string vm_print();
 void vm_call();
 void vm_return();
 void vm_send();
@@ -50,7 +50,7 @@ void vm_recv();
 void vm_start();
 void vm_join();
 void vm_stop();
-static std::string vm_add();
+std::string vm_add();
 void vm_sub();
 void vm_div();
 void vm_mul();
