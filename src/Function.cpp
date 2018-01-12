@@ -324,14 +324,47 @@ Function::~Function() {
 }
 
 void Function::run() {
-    if(this->jit->find(this->vpc) != this->jit->end()) {
-        this->jit->at(this->vpc)();
-    } else {
-        dtt_func compiled = this->compile();
-        compiled();
-    }
+//    if(this->jit->find(this->vpc) != this->jit->end()) {
+//        this->jit->at(this->vpc)();
+//    } else {
+//        dtt_func compiled = this->compile();
+//        compiled();
+//    }
 //    while(this->vpc < this->dtt->si && !this->anotherFunctionCalled)
 //        this->dtt[this->vpc++]();
+
+//    typedef std::string (*bc)();
+    void*bytecodes[] = {&&prolog, &&assign, &&print, &&add, &&epilog};
+
+    void* startCompiledBlock = (void *)mmap(NULL, 4096, PROT_READ | PROT_WRITE | PROT_EXEC,
+                                            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    size_t size = (char*)&&epilog - (char*)&&prolog;
+    memcpy(startCompiledBlock, &&prolog, size);
+    ((dtt_func)startCompiledBlock)();
+
+    prolog:
+    auto getCurrentFunction = VM::getCurrentFunction;
+    auto getCurrentFunctionNextArgInt = VM::getCurrentFunctionNextArgInt;
+    auto getCurrentFunctionNextArgStr = VM::getCurrentFunctionNextArgStr;
+    auto setVarTable = VM::setVarTable;
+    auto print = VM::print;
+
+    dtt_arg *arg0;
+    dtt_arg *arg1;
+    dtt_arg *arg2;
+    int val0, val1, val2;
+
+    assign:
+    setVarTable(getCurrentFunctionNextArgStr(), getCurrentFunctionNextArgInt());
+
+    print:
+    print(std::to_string(getCurrentFunctionNextArgInt()));
+
+    add:
+    setVarTable(getCurrentFunctionNextArgStr(), getCurrentFunctionNextArgInt() + getCurrentFunctionNextArgInt());
+
+    epilog:
+    return;
 }
 
 dtt_arg* Function::getNextArg() {

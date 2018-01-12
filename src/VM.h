@@ -24,6 +24,9 @@ public:
     static void stop();
 
     static Function* getCurrentFunction();
+    static int getCurrentFunctionNextArgInt();
+    static std::string getCurrentFunctionNextArgStr();
+    static void setVarTable(std::string, int);
     static Thread* getCurrentThread();
     static Function* getNewFunction(std::string);
     static Thread* getNewThread(std::string, std::string);

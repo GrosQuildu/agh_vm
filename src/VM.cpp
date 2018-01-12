@@ -99,6 +99,23 @@ Function* VM::getCurrentFunction() {
     return VM::threadManager.getCurrentFunction();
 }
 
+int VM::getCurrentFunctionNextArgInt() {
+    auto arg = VM::getCurrentFunction()->getNextArg();
+    int val = arg->valInt;
+    if(arg->type == VAR)
+        val = VM::getCurrentFunction()->var_table[arg->valStr];
+    return val;
+}
+
+std::string VM::getCurrentFunctionNextArgStr() {
+    auto arg = VM::getCurrentFunction()->getNextArg();
+    return arg->valStr;
+}
+
+void VM::setVarTable(std::string name, int value) {
+    VM::getCurrentFunction()->var_table[name] = value;
+}
+
 Thread* VM::getCurrentThread() {
     return VM::threadManager.getCurrentThread();
 }

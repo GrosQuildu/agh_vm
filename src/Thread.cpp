@@ -24,16 +24,16 @@ Thread::~Thread() {
 }
 
 void Thread::run() {
-    while(this->currect_function != nullptr && !this->reshedule)
+//    while(this->currect_function != nullptr && !this->reshedule)
         this->currect_function->run();
 
-    if(this->currect_function == nullptr)
+//    if(this->currect_function == nullptr)
         this->status = THREAD_FINISHED;
 
-    if(this->reshedule) {
-        this->reshedule = false;
-        this->currect_function->anotherFunctionCalled = false;
-    }
+//    if(this->reshedule) {
+//        this->reshedule = false;
+//        this->currect_function->anotherFunctionCalled = false;
+//    }
 }
 
 #if DEBUG == 1
