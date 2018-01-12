@@ -20,6 +20,8 @@ Thread::~Thread() {
         delete currect_function;
         currect_function = previousFunction;
     }
+    for(auto it = this->joiningThreads.begin(); it != joiningThreads.end(); it++)
+        (*it)->unblock();
 }
 
 void Thread::run() {
@@ -37,6 +39,15 @@ void Thread::run() {
         this->reshedule = false;
         this->currect_function->anotherFunctionCalled = false;
     }
+}
+
+void Thread::joining(Thread *joiningThread) {
+    this->joiningThreads.push_back(joiningThread);
+}
+
+void Thread::unblock() {
+    this->status = THREAD_READY;
+    this->currect_function->blocked = false;
 }
 
 #if DEBUG == 1
@@ -146,9 +157,8 @@ Thread* ThreadManager::getCurrentThread() {
 Thread* ThreadManager::getThread(std::string threadName) {
     auto thread = std::find_if(this->threads.begin(), this->threads.end(),
                                [&threadName](const Thread* threadTmp) {return threadTmp->name == threadName;});
-    if(thread == this->threads.end()) {
+    if(thread == this->threads.end())
         return nullptr;
-    }
     return *thread;
 }
 
@@ -240,6 +250,9 @@ Thread* RoundRobinScheduler::schedule(Thread* current_thread, std::vector<Thread
         if((*it)->status != THREAD_BLOCKED) {
             return *it;
         }
+    }
+    if((*currentThreadIt)->status != THREAD_BLOCKED) {
+        return *currentThreadIt;
     }
     throw VMRuntimeException("All threads blocked");
 }

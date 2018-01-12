@@ -30,7 +30,7 @@ public:
     Thread* getCurrentThread();
     void stopThread(std::string);
 
-    bool isThread(std::string);
+    Thread* getThread(std::string);
 
     bool changeScheduler(std::string);
     void setSchedulingFrequency(int);

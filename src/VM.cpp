@@ -146,8 +146,8 @@ void VM::print(std::string value) {
     #endif
 }
 
-bool VM::isThread(std::string threadName) {
-    return this->threadManager->getThread(threadName) != nullptr;
+Thread* VM::getThread(std::string threadName) {
+    return this->threadManager->getThread(threadName);
 }
 
 

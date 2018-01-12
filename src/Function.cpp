@@ -479,8 +479,10 @@ void vm_join(){
     auto currentFunction = vm.getCurrentFunction(false);
     auto arg0 = currentFunction->getNextArg(false);
 
-    if(vm.isThread(arg0.valStr)) {
+    auto threadToJoin = vm.getThread(arg0.valStr);
+    if(threadToJoin != nullptr) {
         currentFunction->blocked = true;
+        threadToJoin->joining(vm.getCurrentThread());
     } else {
         currentFunction->blocked = false;
         currentFunction->vpc++;

@@ -23,10 +23,14 @@ public:
     ~Thread();
     void run();
 
+    void joining(Thread*);
+    void unblock();
+
     std::string name;
     Function* currect_function;
     int status;
     std::vector<int> recv_table;
+    std::vector<Thread*> joiningThreads;
     bool reshedule;
 
     #if DEBUG == 1
