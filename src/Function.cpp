@@ -371,14 +371,16 @@ void Function::setArguments(std::vector<int> arguments) {
 
 
 void vm_schedule() {
-    auto currentFunction = VM::getCurrentFunction();
+    auto vm = VM::getVM();
+    auto currentFunction = vm.getCurrentFunction();
     currentFunction->anotherFunctionCalled = true;
 
-    VM::getCurrentThread()->reshedule = true;
+    vm.getCurrentThread()->reshedule = true;
 }
 
 void vm_assign(){
-    auto currentFunction = VM::getCurrentFunction();
+    auto vm = VM::getVM();
+    auto currentFunction = vm.getCurrentFunction();
     auto arg0 = currentFunction->getNextArg();
     auto arg1 = currentFunction->getNextArg();
 
@@ -389,25 +391,27 @@ void vm_assign(){
     currentFunction->var_table[arg0.valStr] = val1;
 };
 void vm_print() {
-    auto currentFunction = VM::getCurrentFunction();
+    auto vm = VM::getVM();
+    auto currentFunction = vm.getCurrentFunction();
     auto arg0 = currentFunction->getNextArg();
 
     int val0 = arg0.valInt;
     if(arg0.type == VAR)
         val0 = currentFunction->var_table[arg0.valStr];
 
-    VM::print(std::to_string(val0));
+    vm.print(std::to_string(val0));
 }
 
 void vm_call(){
-    auto currentFunction = VM::getCurrentFunction();
+    auto vm = VM::getVM();
+    auto currentFunction = vm.getCurrentFunction();
     auto arg0 = currentFunction->getNextArg();
     auto arg1 = currentFunction->getNextArg();
 
     currentFunction->anotherFunctionCalled = true;
     currentFunction->return_variable = arg1.valStr;
 
-    auto newFunction = VM::getNewFunction(arg0.valStr);
+    auto newFunction = vm.getNewFunction(arg0.valStr);
     std::vector<int> newFunctionArgs;
 
     for (int i = 0; i < newFunction->arg_table_size; ++i) {
@@ -421,10 +425,11 @@ void vm_call(){
     newFunction->setArguments(newFunctionArgs);
     newFunction->returnFunction = currentFunction;
 
-    VM::getCurrentThread()->currect_function = newFunction;
+    vm.getCurrentThread()->currect_function = newFunction;
 };
 void vm_return(){
-    auto currentFunction = VM::getCurrentFunction();
+    auto vm = VM::getVM();
+    auto currentFunction = vm.getCurrentFunction();
     auto arg0 = currentFunction->getNextArg();
 
     int val0 = arg0.valInt;
@@ -435,18 +440,19 @@ void vm_return(){
         currentFunction->returnFunction->var_table[currentFunction->returnFunction->return_variable] = val0;
         currentFunction->returnFunction->anotherFunctionCalled = false;
     }
-    VM::getCurrentThread()->currect_function = currentFunction->returnFunction;
+    vm.getCurrentThread()->currect_function = currentFunction->returnFunction;
     delete currentFunction;
 };
 
 void vm_send(){};
 void vm_recv(){};
 void vm_start(){
-    auto currentFunction = VM::getCurrentFunction();
+    auto vm = VM::getVM();
+    auto currentFunction = vm.getCurrentFunction();
     auto arg0 = currentFunction->getNextArg();
     auto arg1 = currentFunction->getNextArg();
 
-    auto newThread = VM::getNewThread(arg1.valStr, arg0.valStr);
+    auto newThread = vm.getNewThread(arg1.valStr, arg0.valStr);
 
     std::vector<int> newFunctionArgs;
     for (int i = 0; i < newThread->currect_function->arg_table_size; ++i) {
@@ -463,14 +469,16 @@ void vm_join(){
 
 };
 void vm_stop(){
-    auto currentFunction = VM::getCurrentFunction();
+    auto vm = VM::getVM();
+    auto currentFunction = vm.getCurrentFunction();
     auto arg0 = currentFunction->getNextArg();
 
-    VM::stopThread(arg0.valStr);
+    vm.stopThread(arg0.valStr);
 };
 
 void vm_add() {
-    auto currentFunction = VM::getCurrentFunction();
+    auto vm = VM::getVM();
+    auto currentFunction = vm.getCurrentFunction();
     auto arg0 = currentFunction->getNextArg();
     auto arg1 = currentFunction->getNextArg();
     auto arg2 = currentFunction->getNextArg();
@@ -486,7 +494,8 @@ void vm_add() {
     currentFunction->var_table[arg0.valStr] = val1 + val2;
 }
 void vm_sub() {
-    auto currentFunction = VM::getCurrentFunction();
+    auto vm = VM::getVM();
+    auto currentFunction = vm.getCurrentFunction();
     auto arg0 = currentFunction->getNextArg();
     auto arg1 = currentFunction->getNextArg();
     auto arg2 = currentFunction->getNextArg();
@@ -502,7 +511,8 @@ void vm_sub() {
     currentFunction->var_table[arg0.valStr] = val1 - val2;
 };
 void vm_div() {
-    auto currentFunction = VM::getCurrentFunction();
+    auto vm = VM::getVM();
+    auto currentFunction = vm.getCurrentFunction();
     auto arg0 = currentFunction->getNextArg();
     auto arg1 = currentFunction->getNextArg();
     auto arg2 = currentFunction->getNextArg();
@@ -518,7 +528,8 @@ void vm_div() {
     currentFunction->var_table[arg0.valStr] = val1 / val2;
 };
 void vm_mul() {
-    auto currentFunction = VM::getCurrentFunction();
+    auto vm = VM::getVM();
+    auto currentFunction = vm.getCurrentFunction();
     auto arg0 = currentFunction->getNextArg();
     auto arg1 = currentFunction->getNextArg();
     auto arg2 = currentFunction->getNextArg();

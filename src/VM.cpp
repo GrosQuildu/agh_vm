@@ -11,26 +11,18 @@
 #include <unistd.h>
 
 
-bool VM::isInitialized = false;
-FunctionFactory VM::functionFactory;
-ThreadManager VM::threadManager;
-std::vector<ThreadScheduler*> VM::threadSchedulers;
 
-int VM::ThreadWinWidth = 30;
-int VM::ThreadWinHeight = 35;
-int VM::ThreadWinMargin = 2;
-
-#if DEBUG == 1
-std::vector<WINDOW*> VM::windows;
-WINDOW* VM::terminal;
-#endif
 
 void VM::initialize(const std::string codeDirPath, const std::string defaultScheduler) {
     if(!VM::isInitialized) {
-        VM::functionFactory.initialize(codeDirPath);
+        this->functionFactory = new FunctionFactory;
+        this->threadManager = new ThreadManager;
+        this->threadSchedulers = new std::vector<ThreadScheduler*>;
 
-        VM::threadSchedulers.push_back(new RoundRobinScheduler());
-        VM::threadSchedulers.push_back(new FIFOScheduler());
+        VM::functionFactory->initialize(codeDirPath);
+
+        VM::threadSchedulers->push_back(new RoundRobinScheduler());
+        VM::threadSchedulers->push_back(new FIFOScheduler());
         auto schedulerSet = VM::changeScheduler(defaultScheduler);
         if(!schedulerSet)
             throw VMRuntimeException("Scheduler " + defaultScheduler + " not found");
@@ -38,6 +30,10 @@ void VM::initialize(const std::string codeDirPath, const std::string defaultSche
         VM::isInitialized = true;
 
         #if DEBUG == 1
+        this->ThreadWinWidth = 30;
+        this->ThreadWinHeight = 35;
+        this->ThreadWinMargin = 2;
+
         initscr();
         cbreak();
         nodelay(stdscr, TRUE);
@@ -76,19 +72,25 @@ VM& VM::getVM() {
 }
 
 void VM::start() {
-    if(!VM::functionFactory.haveFunction("MAIN")) {
+    if(!VM::functionFactory->haveFunction("MAIN")) {
         throw VMRuntimeException("MAIN function not found");
     }
-    auto mainFunction = VM::functionFactory.makeFunction("MAIN");
-    VM::threadManager.addThread("MAIN", mainFunction);
+    auto mainFunction = VM::functionFactory->makeFunction("MAIN");
+    VM::threadManager->addThread("MAIN", mainFunction);
 
-    VM::threadManager.schedule();
+    VM::threadManager->schedule();
 }
 
 void VM::stop() {
-    VM::threadManager.clearAll();
-    for(auto it = VM::threadSchedulers.begin(); it != VM::threadSchedulers.end(); it++)
+    VM::threadManager->clearAll();
+    for(auto it = VM::threadSchedulers->begin(); it != VM::threadSchedulers->end(); it++)
         delete *it;
+    delete this->functionFactory;
+    delete this->threadManager;
+    delete this->threadSchedulers;
+    this->functionFactory = nullptr;
+    this->threadManager = nullptr;
+    this->threadSchedulers = nullptr;
     std::cout<<"Virtual Machines stopped\n";
 }
 
@@ -96,34 +98,34 @@ Function* VM::getCurrentFunction() {
     #if DEBUG == 1
     VM::refresh();
     #endif
-    return VM::threadManager.getCurrentFunction();
+    return VM::threadManager->getCurrentFunction();
 }
 
 Thread* VM::getCurrentThread() {
-    return VM::threadManager.getCurrentThread();
+    return VM::threadManager->getCurrentThread();
 }
 
 Function* VM::getNewFunction(std::string functionName) {
-    return VM::functionFactory.makeFunction(functionName);
+    return VM::functionFactory->makeFunction(functionName);
 }
 
 Thread* VM::getNewThread(std::string threadName, std::string functionName) {
-    auto mainFunction = VM::functionFactory.makeFunction(functionName);
-    return VM::threadManager.addThread(threadName, mainFunction);
+    auto mainFunction = VM::functionFactory->makeFunction(functionName);
+    return VM::threadManager->addThread(threadName, mainFunction);
 }
 
 void VM::stopThread(std::string threadName) {
     try {
-        VM::threadManager.removeThread(threadName);
+        VM::threadManager->removeThread(threadName);
     } catch(ThreadManagerException e) {
         VM::stop();
     }
 }
 
 bool VM::changeScheduler(std::string schedulerName) {
-    for(auto it = VM::threadSchedulers.begin(); it != VM::threadSchedulers.end(); it++) {
+    for(auto it = VM::threadSchedulers->begin(); it != VM::threadSchedulers->end(); it++) {
         if((*it)->getName() == schedulerName) {
-            VM::threadManager.changeScheduler(*it);
+            VM::threadManager->changeScheduler(*it);
             return true;
         }
     }
@@ -131,7 +133,7 @@ bool VM::changeScheduler(std::string schedulerName) {
 }
 
 void VM::setSchedulingFrequency(int frequency) {
-    VM::functionFactory.setSchedulingFrequency(frequency);
+    VM::functionFactory->setSchedulingFrequency(frequency);
 }
 
 void VM::print(std::string value) {
@@ -146,7 +148,7 @@ void VM::print(std::string value) {
 
 #if DEBUG == 1
 void VM::refresh() {
-    VM::threadManager.refreshThreads(VM::windows, 0);
+    VM::threadManager->refreshThreads(VM::windows, 0);
     usleep(1 * 1000000);
 }
 #endif

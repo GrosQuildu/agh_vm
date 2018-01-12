@@ -188,7 +188,7 @@ FIFOScheduler::FIFOScheduler() : ThreadScheduler("FIFO") {}
 
 void FIFOScheduler::initialize(){
     if(!this->initialized) {
-        VM::setSchedulingFrequency(0);
+        VM::getVM().setSchedulingFrequency(0);
         this->initialized = true;
     }
 }
@@ -212,7 +212,7 @@ RoundRobinScheduler::RoundRobinScheduler() : ThreadScheduler("RoundRobin") {}
 
 void RoundRobinScheduler::initialize() {
     if(!this->initialized) {
-        VM::setSchedulingFrequency(5);
+        VM::getVM().setSchedulingFrequency(5);
         this->initialized = true;
     }
 }
