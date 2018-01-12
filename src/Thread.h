@@ -83,8 +83,9 @@ public:
     void schedule();
     void changeScheduler(ThreadScheduler*);
 
-    Function* getCurrentFunction();
+    Function* getCurrentFunction(bool);
     Thread* getCurrentThread();
+    Thread* getThread(std::string);
 
     #if DEBUG == 1
     void refreshThreads(std::vector<WINDOW*>, unsigned int);

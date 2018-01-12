@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 2.6)
 project (VM)
-option(BUILD_ARM "Build for ARM architecture" ON)
+option(BUILD_ARM "Build for ARM architecture" OFF)
 
 set (PROJECT_SOURCE_DIR "${CMAKE_SOURCE_DIR}/src")
 file(GLOB VM_cpp "${PROJECT_SOURCE_DIR}/*.cpp")

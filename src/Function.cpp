@@ -319,6 +319,7 @@ Function::Function(FunctionPrototype& functionPrototype) {
     this->vpc = this->dtt->begin();
 
     this->anotherFunctionCalled = false;
+    this->blocked = false;
     this->returnFunction = nullptr;
     this->return_variable = "";
 }
@@ -329,13 +330,14 @@ Function::~Function() {
 }
 
 void Function::run() {
-    while(this->vpc != this->dtt->end() && !this->anotherFunctionCalled)
-        (*this->vpc++)();
+    while(this->vpc != this->dtt->end() && !this->anotherFunctionCalled && !this->blocked)
+        (*this->vpc)();
 }
 
-dtt_arg& Function::getNextArg() {
+dtt_arg& Function::getNextArg(bool increment) {
     dtt_arg& nextArg = this->dtt_args->front();
-    this->dtt_args->pop_front();
+    if(increment)
+        this->dtt_args->pop_front();
     return nextArg;
 }
 
@@ -444,8 +446,15 @@ void vm_return(){
     delete currentFunction;
 };
 
-void vm_send(){};
-void vm_recv(){};
+void vm_send(){
+    auto vm = VM::getVM();
+    auto currentFunction = vm.getCurrentFunction();
+
+};
+void vm_recv(){
+    auto vm = VM::getVM();
+    auto currentFunction = vm.getCurrentFunction();
+};
 void vm_start(){
     auto vm = VM::getVM();
     auto currentFunction = vm.getCurrentFunction();
@@ -466,7 +475,17 @@ void vm_start(){
     newThread->currect_function->setArguments(newFunctionArgs);
 };
 void vm_join(){
+    auto vm = VM::getVM();
+    auto currentFunction = vm.getCurrentFunction(false);
+    auto arg0 = currentFunction->getNextArg(false);
 
+    if(vm.isThread(arg0.valStr)) {
+        currentFunction->blocked = true;
+    } else {
+        currentFunction->blocked = false;
+        currentFunction->vpc++;
+        currentFunction->getNextArg();
+    }
 };
 void vm_stop(){
     auto vm = VM::getVM();

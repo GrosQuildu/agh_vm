@@ -23,11 +23,14 @@ public:
     void start();
     void stop();
 
-    Function* getCurrentFunction();
-    Thread* getCurrentThread();
+    Function* getCurrentFunction(bool = true);
     Function* getNewFunction(std::string);
+
     Thread* getNewThread(std::string, std::string);
+    Thread* getCurrentThread();
     void stopThread(std::string);
+
+    bool isThread(std::string);
 
     bool changeScheduler(std::string);
     void setSchedulingFrequency(int);

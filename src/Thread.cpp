@@ -23,11 +23,15 @@ Thread::~Thread() {
 }
 
 void Thread::run() {
-    while(this->currect_function != nullptr && !this->reshedule)
+    while(this->currect_function != nullptr && !this->reshedule && !this->currect_function->blocked)
         this->currect_function->run();
 
     if(this->currect_function == nullptr)
         this->status = THREAD_FINISHED;
+    else if(this->currect_function->blocked)
+        this->status = THREAD_BLOCKED;
+    else
+        this->status = THREAD_READY;
 
     if(this->reshedule) {
         this->reshedule = false;
@@ -51,9 +55,7 @@ void Thread::refresh(WINDOW *window) {
 
     // add vpc
     int headerSize = 3;
-    auto vpcOffset = std::distance(this->currect_function->dtt->begin(), this->currect_function->vpc) - 1;
-    if(vpcOffset < 0)
-        vpcOffset = 0;
+    auto vpcOffset = std::distance(this->currect_function->dtt->begin(), this->currect_function->vpc);
     mvwaddstr(window, int(headerSize + vpcOffset), int(lines.at((unsigned long)headerSize + vpcOffset - 1).size() + 3), "<");
 
     // add args to code
@@ -131,12 +133,23 @@ void ThreadManager::changeScheduler(ThreadScheduler *scheduler) {
     this->scheduler->initialize();
 }
 
-Function *ThreadManager::getCurrentFunction() {
+Function *ThreadManager::getCurrentFunction(bool increment) {
+    if(increment)
+        this->current_thread->currect_function->vpc++;
     return this->current_thread->currect_function;
 }
 
 Thread* ThreadManager::getCurrentThread() {
     return this->current_thread;
+}
+
+Thread* ThreadManager::getThread(std::string threadName) {
+    auto thread = std::find_if(this->threads.begin(), this->threads.end(),
+                               [&threadName](const Thread* threadTmp) {return threadTmp->name == threadName;});
+    if(thread == this->threads.end()) {
+        return nullptr;
+    }
+    return *thread;
 }
 
 #if DEBUG == 1
@@ -150,6 +163,7 @@ void ThreadManager::refreshThreads(std::vector<WINDOW*> windows, unsigned int st
         wrefresh(windows.at((unsigned long)i));
     }
 }
+
 #endif
 
 
@@ -163,19 +177,13 @@ Thread *ThreadScheduler::schedule(Thread *current_thread, std::vector<Thread *> 
 
     if(current_thread->status == THREAD_FINISHED) {
         if(threads.size() == 1) {
-//            delete current_thread;
             threads.clear();
         } else {
             auto currentThreadIt = std::find(threads.begin(), threads.end(), current_thread);
             delete *currentThreadIt;
             threads.erase(currentThreadIt);
-            return *currentThreadIt;
         }
     }
-
-    if(threads.size() == 1)
-        return threads.at(0);
-
     return nullptr;
 }
 
@@ -194,12 +202,9 @@ void FIFOScheduler::initialize(){
 }
 
 Thread* FIFOScheduler::schedule(Thread* current_thread, std::vector<Thread*>& threads) {
-    auto newThreadIt = ThreadScheduler::schedule(current_thread, threads);
-    if(newThreadIt != nullptr)
-        return newThreadIt;
-
-    if(threads.size() == 0)
-        return nullptr;
+    auto newThread = ThreadScheduler::schedule(current_thread, threads);
+    if(newThread != nullptr)
+    return newThread;
 
     for(auto it = threads.begin(); it != threads.end(); it++) {
         if((*it)->status != THREAD_BLOCKED)
@@ -218,18 +223,20 @@ void RoundRobinScheduler::initialize() {
 }
 
 Thread* RoundRobinScheduler::schedule(Thread* current_thread, std::vector<Thread*>& threads) {
-    auto newThreadIt = ThreadScheduler::schedule(current_thread, threads);
-    if(newThreadIt != nullptr)
-        return newThreadIt;
-
-    if(threads.size() == 0)
-        return nullptr;
+    auto newThread = ThreadScheduler::schedule(current_thread, threads);
+    if(newThread != nullptr)
+        return newThread;
 
     auto currentThreadIt = std::find(threads.begin(), threads.end(), current_thread);
-    for(auto it = currentThreadIt + 1; it != currentThreadIt; it++) {
-        if(it == threads.end())
-            it = threads.begin();
+    if(currentThreadIt == threads.end())
+        currentThreadIt = threads.begin();
 
+    for(auto it = currentThreadIt + 1; it != threads.end(); it++) {
+        if((*it)->status != THREAD_BLOCKED) {
+            return *it;
+        }
+    }
+    for(auto it = threads.begin(); it != currentThreadIt; it++) {
         if((*it)->status != THREAD_BLOCKED) {
             return *it;
         }

@@ -94,11 +94,11 @@ void VM::stop() {
     std::cout<<"Virtual Machines stopped\n";
 }
 
-Function* VM::getCurrentFunction() {
+Function* VM::getCurrentFunction(bool increment) {
     #if DEBUG == 1
     VM::refresh();
     #endif
-    return VM::threadManager->getCurrentFunction();
+    return VM::threadManager->getCurrentFunction(increment);
 }
 
 Thread* VM::getCurrentThread() {
@@ -146,9 +146,14 @@ void VM::print(std::string value) {
     #endif
 }
 
+bool VM::isThread(std::string threadName) {
+    return this->threadManager->getThread(threadName) != nullptr;
+}
+
+
 #if DEBUG == 1
 void VM::refresh() {
     VM::threadManager->refreshThreads(VM::windows, 0);
-    usleep(1 * 1000000);
+    usleep(5 * 100000);
 }
 #endif

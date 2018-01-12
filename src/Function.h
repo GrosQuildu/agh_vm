@@ -102,7 +102,7 @@ public:
     ~Function();
 
     void run();
-    dtt_arg& getNextArg();
+    dtt_arg& getNextArg(bool = true);
     void setArguments(std::vector<int>);
     std::vector<std::string> toStr() const;
     friend std::ostream& operator<<(std::ostream&, const Function&);
@@ -116,6 +116,7 @@ public:
     std::forward_list<dtt_func>::iterator vpc;
 
     bool anotherFunctionCalled;
+    bool blocked;
     Function* returnFunction;
     std::string return_variable;
 };
