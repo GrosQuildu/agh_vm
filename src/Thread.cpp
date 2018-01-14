@@ -5,6 +5,21 @@
 #include "Thread.h"
 #include "VM.h"
 
+const std::string threadStatusToStr(unsigned char c) {
+    switch(c) {
+        case 0:
+            return "THREAD_READY";
+        case 1:
+            return "THREAD_BLOCKED";
+        case 2:
+            return "THREAD_FINISHED";
+        case 3:
+            return "THREAD_WAITING";
+        default:
+            return "UNKNOWN_STATE (" + std::to_string(c) + ")";
+    }
+}
+
 
 Thread::Thread(std::string name, Function *currect_function) {
     this->name = name;
@@ -25,15 +40,24 @@ Thread::~Thread() {
 }
 
 void Thread::run() {
-    while(this->currect_function != nullptr && !this->reshedule && !this->currect_function->blocked)
+    while(this->currect_function != nullptr && !this->reshedule &&
+            !this->currect_function->blocked && !this->currect_function->waiting)
         this->currect_function->run();
 
     if(this->currect_function == nullptr)
         this->status = THREAD_FINISHED;
-    else if(this->currect_function->blocked)
-        this->status = THREAD_BLOCKED;
-    else
-        this->status = THREAD_READY;
+    else {
+        if(this->currect_function->blocked)
+            this->status = THREAD_BLOCKED;
+        else
+            this->status = THREAD_READY;
+
+        if(this->currect_function->waiting)
+            this->status = THREAD_WAITING;
+        else
+            this->status = THREAD_READY;
+        this->currect_function->waiting = false;
+    }
 
     if(this->reshedule) {
         this->reshedule = false;
@@ -48,6 +72,10 @@ void Thread::joining(Thread *joiningThread) {
 void Thread::unblock() {
     this->status = THREAD_READY;
     this->currect_function->blocked = false;
+}
+
+void Thread::receive(int value) {
+    this->recv_table.push_back(value);
 }
 
 #if DEBUG == 1
@@ -160,6 +188,17 @@ Thread* ThreadManager::getThread(std::string threadName) {
     if(thread == this->threads.end())
         return nullptr;
     return *thread;
+}
+
+void ThreadManager::checkAllThreadsWaiting() {
+    for(auto it = this->threads.begin(); it != this->threads.end(); it++)
+        if((*it)->status == THREAD_READY)
+            return;
+
+    std::string threadsStatuses = "";
+    for(auto it = this->threads.begin(); it != this->threads.end(); it++)
+        threadsStatuses += "\n" + (*it)->name + " - " + threadStatusToStr((*it)->status);
+    throw VMRuntimeException("All threads blocked, statuses: " + threadsStatuses);
 }
 
 #if DEBUG == 1

@@ -5,7 +5,7 @@
 #include "Function.h"
 #include "VM.h"
 
-const std::string const2str(char c) {
+const std::string argTypeToStr(unsigned char c) {
     switch(c) {
         case 0:
             return "VAR";
@@ -88,7 +88,7 @@ std::pair<bool, int> FunctionFactory::check_instruction(std::string line, std::v
             err_msg += "Required: " + vector2string(required_args) + "\n";
             err_msg += "Found: [";
             for (auto it = dtt_args_vector.end() - arg_counter; it != dtt_args_vector.end(); ++it)
-                err_msg += const2str((*it).type) + ", ";
+                err_msg += argTypeToStr((*it).type) + ", ";
             err_msg += "]";
             throw ParserException(err_msg);
         }
@@ -229,7 +229,7 @@ void FunctionFactory::initialize(std::string codeDirPath) {
 
     for(auto it = calledFunctionsToCheck.begin(); it != calledFunctionsToCheck.end(); it++) {
         std::string functionToCheckName = std::get<0>(*it);
-        int functionArgumentsStartPosition = std::get<1>(*it);
+//        int functionArgumentsStartPosition = std::get<1>(*it);
         int functionArgumentsCount = std::get<2>(*it);
 
         if(!this->haveFunction(functionToCheckName))
@@ -320,6 +320,7 @@ Function::Function(FunctionPrototype& functionPrototype) {
 
     this->anotherFunctionCalled = false;
     this->blocked = false;
+    this->waiting = false;
     this->returnFunction = nullptr;
     this->return_variable = "";
 }
@@ -330,7 +331,7 @@ Function::~Function() {
 }
 
 void Function::run() {
-    while(this->vpc != this->dtt->end() && !this->anotherFunctionCalled && !this->blocked)
+    while(this->vpc != this->dtt->end() && !this->anotherFunctionCalled && !this->blocked && !this->waiting)
         (*this->vpc)();
 }
 
@@ -449,11 +450,34 @@ void vm_return(){
 void vm_send(){
     auto vm = VM::getVM();
     auto currentFunction = vm.getCurrentFunction();
+    auto arg0 = currentFunction->getNextArg();
+    auto arg1 = currentFunction->getNextArg();
 
+    int val1 = arg1.valInt;
+    if(arg1.type == VAR)
+        val1 = currentFunction->var_table[arg1.valStr];
+
+    vm.getThread(arg0.valStr)->receive(val1);
 };
 void vm_recv(){
     auto vm = VM::getVM();
-    auto currentFunction = vm.getCurrentFunction();
+    auto currentFunction = vm.getCurrentFunction(false);
+    auto arg0 = currentFunction->getNextArg(false);
+    auto currentThread = vm.getCurrentThread();
+
+    auto recv_table = &currentThread->recv_table;
+    if(recv_table->size() != 0) {
+        currentFunction->vpc++;
+        currentFunction->getNextArg();
+
+        currentFunction->var_table[arg0.valStr] = recv_table->back();
+        recv_table->pop_back();
+
+        currentFunction->waiting = false;
+    } else {
+        vm.checkAllThreadsWaiting();
+        currentFunction->waiting = true;
+    }
 };
 void vm_start(){
     auto vm = VM::getVM();

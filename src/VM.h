@@ -22,6 +22,7 @@ public:
 
     void start();
     void stop();
+    void checkAllThreadsWaiting();
 
     Function* getCurrentFunction(bool = true);
     Function* getNewFunction(std::string);

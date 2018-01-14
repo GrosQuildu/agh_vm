@@ -25,18 +25,18 @@ class Function;
 typedef void (*dtt_func)();
 
 typedef struct dtt_arg {
-    char type;
+    unsigned char type;
     int valInt;
     std::string valStr;
 } dtt_arg;
 
-const char VAR = 0;
-const char ARG = 1;
-const char CONST = 2;
-const char FUNC = 3;
-const char THREAD = 4;
+const unsigned char VAR = 0;
+const unsigned char ARG = 1;
+const unsigned char CONST = 2;
+const unsigned char FUNC = 3;
+const unsigned char THREAD = 4;
 
-const std::string const2str(char);
+const std::string argTypeToStr(unsigned char);
 
 void vm_schedule();
 void vm_assign();
@@ -117,6 +117,7 @@ public:
 
     bool anotherFunctionCalled;
     bool blocked;
+    bool waiting;
     Function* returnFunction;
     std::string return_variable;
 };

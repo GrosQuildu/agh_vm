@@ -24,7 +24,7 @@ std::string vector2string(std::vector<std::set<char>> v) {
     for (auto &&s : v) {
         result += "{";
         for (auto &&x : s)
-            result += const2str(x) + "|";
+            result += argTypeToStr(x) + "|";
         result += "}, ";
     }
     result += "]";

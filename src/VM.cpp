@@ -150,6 +150,10 @@ Thread* VM::getThread(std::string threadName) {
     return this->threadManager->getThread(threadName);
 }
 
+void VM::checkAllThreadsWaiting() {
+    VM::threadManager->checkAllThreadsWaiting();
+}
+
 
 #if DEBUG == 1
 void VM::refresh() {
