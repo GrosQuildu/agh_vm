@@ -19,7 +19,7 @@ bool contains(std::string haystack, std::string needle) {
     return haystack.find(needle) != haystack.npos;
 }
 
-std::string vector2string(std::vector<std::set<char>> v) {
+std::string vector2string(std::vector<std::set<unsigned char>> v) {
     std::string result = "[";
     for (auto &&s : v) {
         result += "{";

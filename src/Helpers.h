@@ -33,6 +33,6 @@ static inline void trim(std::string &s) {
     rtrim(s);
 }
 
-std::string vector2string(std::vector<std::set<char>>);
+std::string vector2string(std::vector<std::set<unsigned char>>);
 
 #endif //VM_HELPERS_H
