@@ -72,7 +72,7 @@ dtt_arg FunctionFactory::parse_load(std::string line, int arg_table_size, std::m
 }
 
 std::pair<bool, int> FunctionFactory::check_instruction(std::string line, std::vector<dtt_arg> &dtt_args_vector, int arg_counter) {
-    std::vector<std::set<char>> &required_args = bytecodeMapping.at(line).second;
+    std::vector<std::set<unsigned char>> &required_args = bytecodeMapping.at(line).second;
     auto argToCheck = dtt_args_vector.end() - arg_counter;
     bool unknownNumberOfArguments = false;
     int argumentsChecked = 0;
