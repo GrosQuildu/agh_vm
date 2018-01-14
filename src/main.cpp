@@ -11,7 +11,7 @@ using namespace std;
 int main() {
     cout<<"Start\n";
     auto codeDir = "/home/gros/studia/eaiib_3/wzorce/virtual_machine/example_program/";
-    auto defaultScheduler = "FIFO";
+    auto defaultScheduler = "RoundRobin";
     VM::getVM().initialize(codeDir, defaultScheduler);
     VM::getVM().start();
 }

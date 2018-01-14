@@ -36,13 +36,11 @@ const unsigned char CONST = 2;
 const unsigned char FUNC = 3;
 const unsigned char THREAD = 4;
 
-const std::string const2str(unsigned char);
+const std::string argTypeToStr(unsigned char);
 
-std::string vm_prolog();
-std::string vm_epilog();
 void vm_schedule();
-std::string vm_assign();
-std::string vm_print();
+void vm_assign();
+void vm_print();
 void vm_call();
 void vm_return();
 void vm_send();
@@ -50,49 +48,50 @@ void vm_recv();
 void vm_start();
 void vm_join();
 void vm_stop();
-std::string vm_add();
+void vm_add();
 void vm_sub();
 void vm_div();
 void vm_mul();
 
 
 static const std::string bytecodeExtension = ".pp";
-static std::map<std::string, std::pair<unsigned char, std::vector<std::set<unsigned char>>>> bytecodeMapping = {
+static std::map<std::string, std::pair<dtt_func, std::vector<std::set<char>>>> bytecodeMapping = {
         // BYTECODE: (function, vector({arg1type | arg1type}, {arg2type}, {arg3type}))
-        {"DECLARE", {-1,   { {VAR} }}},
-        {"ASSIGN",  {1, { {VAR}, {VAR,CONST,ARG} }}},
-        {"PRINT",   {2,  { {VAR,CONST,ARG} }}},
+        {"SCHEDULE", {vm_schedule, {{}}}},
 
-        {"CALL",    {2,   { {FUNC}, {VAR}, {} }}},
-        {"RETURN",  {3, { {VAR,CONST,ARG} }}},
+        {"DECLARE", {nullptr,   { {VAR} }}},
+        {"ASSIGN",  {vm_assign, { {VAR}, {VAR,CONST,ARG} }}},
+        {"PRINT",   {vm_print,  { {VAR,CONST,ARG} }}},
 
-        {"SEND",    {4,   { {THREAD}, {VAR,CONST,ARG} }}},
-        {"RECV",    {5,   { {VAR} }}},
-        {"START",   {6,  { {FUNC}, {THREAD}, {} }}},
-        {"JOIN",    {7,   { {THREAD} }}},
-        {"STOP",    {8,   { {THREAD} }}},
+        {"CALL",    {vm_call,   { {FUNC}, {VAR}, {} }}},
+        {"RETURN",  {vm_return, { {VAR,CONST,ARG} }}},
 
-        {"ADD",     {3,    { {VAR}, {VAR,CONST,ARG}, {VAR,CONST,ARG} }}},
-        {"SUB",     {10,    { {VAR}, {VAR,CONST,ARG}, {VAR,CONST,ARG} }}},
-        {"DIV",     {11,    { {VAR}, {VAR,CONST,ARG}, {VAR,CONST,ARG} }}},
-        {"MUL",     {12,    { {VAR}, {VAR,CONST,ARG}, {VAR,CONST,ARG} }}},
+        {"SEND",    {vm_send,   { {THREAD}, {VAR,CONST,ARG} }}},
+        {"RECV",    {vm_recv,   { {VAR} }}},
+        {"START",   {vm_start,  { {FUNC}, {THREAD}, {} }}},
+        {"JOIN",    {vm_join,   { {THREAD} }}},
+        {"STOP",    {vm_stop,   { {THREAD} }}},
+
+        {"ADD",     {vm_add,    { {VAR}, {VAR,CONST,ARG}, {VAR,CONST,ARG} }}},
+        {"SUB",     {vm_sub,    { {VAR}, {VAR,CONST,ARG}, {VAR,CONST,ARG} }}},
+        {"DIV",     {vm_div,    { {VAR}, {VAR,CONST,ARG}, {VAR,CONST,ARG} }}},
+        {"MUL",     {vm_mul,    { {VAR}, {VAR,CONST,ARG}, {VAR,CONST,ARG} }}},
 };
 
 
 class FunctionPrototype {
 public:
-    FunctionPrototype(std::string, std::vector<unsigned char>*, std::forward_list<dtt_arg>*, int, std::map<std::string, int>);
+    FunctionPrototype(std::string, std::forward_list<dtt_func>*, std::forward_list<dtt_arg>*, int, std::map<std::string, int>);
     ~FunctionPrototype();
     Function* generate();
+    void setSchedulingBytecodes(int);
+    void clearSchedulingBytecodes();
 
     std::string name;
-    std::vector<unsigned char> *dtt;
+    std::forward_list<dtt_func> *dtt;
     std::forward_list<dtt_arg> *dtt_args;
     int arg_table_size;
     std::map<std::string, int> var_table;
-
-    std::map<unsigned long, dtt_func> *jit;
-    unsigned long maxInstructionsInBlock;
 };
 
 
@@ -103,26 +102,24 @@ public:
     ~Function();
 
     void run();
-    dtt_arg* getNextArg();
+    dtt_arg& getNextArg(bool = true);
     void setArguments(std::vector<int>);
-    dtt_func compile();
     std::vector<std::string> toStr() const;
     friend std::ostream& operator<<(std::ostream&, const Function&);
 
     std::string name;
-    std::vector<unsigned char> *dtt;
+    std::forward_list<dtt_func> *dtt;
     std::forward_list<dtt_arg> *dtt_args;
     int arg_table_size;
     std::map<std::string, int> var_table;
 
-    unsigned long vpc;
+    std::forward_list<dtt_func>::iterator vpc;
 
     bool anotherFunctionCalled;
+    bool blocked;
+    bool waiting;
     Function* returnFunction;
     std::string return_variable;
-
-    std::map<unsigned long, dtt_func> *jit;
-    unsigned  long *maxInstructionsInBlock;
 };
 
 
@@ -159,7 +156,7 @@ public:
      */
     Function* makeFunction(std::string);  // factory method
 
-    void setMaxBlockSize(unsigned long);
+    void setSchedulingFrequency(int);
 
 private:
     std::map<std::string, FunctionPrototype*> functionsPrototypes;

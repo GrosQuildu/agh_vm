@@ -20,34 +20,38 @@ public:
      */
     static VM& getVM();  // singleton
 
-    static void start();
-    static void stop();
+    void start();
+    void stop();
+    void checkAllThreadsWaiting();
 
-    static Function* getCurrentFunction();
-    static Thread* getCurrentThread();
-    static Function* getNewFunction(std::string);
-    static Thread* getNewThread(std::string, std::string);
-    static void stopThread(std::string);
+    Function* getCurrentFunction(bool = true);
+    Function* getNewFunction(std::string);
 
-    static bool changeScheduler(std::string);
-    static void setMaxBlockSize(unsigned long);
+    Thread* getNewThread(std::string, std::string);
+    Thread* getCurrentThread();
+    void stopThread(std::string);
 
-    static void print(std::string);
+    Thread* getThread(std::string);
+
+    bool changeScheduler(std::string);
+    void setSchedulingFrequency(int);
+
+    void print(std::string);
 
 private:
-    static bool isInitialized;
-    static FunctionFactory functionFactory;
-    static ThreadManager threadManager;
-    static std::vector<ThreadScheduler*> threadSchedulers;
+    bool isInitialized;
+    FunctionFactory *functionFactory;
+    ThreadManager *threadManager;
+    std::vector<ThreadScheduler*> *threadSchedulers;
 
-    static int ThreadWinWidth;
-    static int ThreadWinHeight;
-    static int ThreadWinMargin;
+    int ThreadWinWidth;
+    int ThreadWinHeight;
+    int ThreadWinMargin;
 
     #if DEBUG == 1
-    static std::vector<WINDOW*> windows;
-    static WINDOW* terminal;
-    static void refresh();
+    std::vector<WINDOW*> windows;
+    WINDOW* terminal;
+    void refresh();
     #endif
 };
 

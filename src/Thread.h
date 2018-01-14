@@ -16,6 +16,9 @@
 const char THREAD_READY = 0;
 const char THREAD_BLOCKED = 1;
 const char THREAD_FINISHED = 2;
+const char THREAD_WAITING = 3;
+
+const std::string threadStatusToStr(char);
 
 class Thread {
 public:
@@ -23,10 +26,15 @@ public:
     ~Thread();
     void run();
 
+    void joining(Thread*);
+    void unblock();
+    void receive(int);
+
     std::string name;
     Function* currect_function;
-    int status;
+    unsigned char status;
     std::vector<int> recv_table;
+    std::vector<Thread*> joiningThreads;
     bool reshedule;
 
     #if DEBUG == 1
@@ -82,9 +90,11 @@ public:
 
     void schedule();
     void changeScheduler(ThreadScheduler*);
+    void checkAllThreadsWaiting();
 
-    Function* getCurrentFunction();
+    Function* getCurrentFunction(bool);
     Thread* getCurrentThread();
+    Thread* getThread(std::string);
 
     #if DEBUG == 1
     void refreshThreads(std::vector<WINDOW*>, unsigned int);

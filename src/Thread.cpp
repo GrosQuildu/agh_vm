@@ -5,8 +5,22 @@
 #include "Thread.h"
 #include "VM.h"
 
+const std::string threadStatusToStr(unsigned char c) {
+    switch(c) {
+        case 0:
+            return "THREAD_READY";
+        case 1:
+            return "THREAD_BLOCKED";
+        case 2:
+            return "THREAD_FINISHED";
+        case 3:
+            return "THREAD_WAITING";
+        default:
+            return "UNKNOWN_STATE (" + std::to_string(c) + ")";
+    }
+}
 
-/* Thread Start */
+
 Thread::Thread(std::string name, Function *currect_function) {
     this->name = name;
     this->currect_function = currect_function;
@@ -21,19 +35,47 @@ Thread::~Thread() {
         delete currect_function;
         currect_function = previousFunction;
     }
+    for(auto it = this->joiningThreads.begin(); it != joiningThreads.end(); it++)
+        (*it)->unblock();
 }
 
 void Thread::run() {
-    while(this->currect_function != nullptr && !this->reshedule)
+    while(this->currect_function != nullptr && !this->reshedule &&
+            !this->currect_function->blocked && !this->currect_function->waiting)
         this->currect_function->run();
 
     if(this->currect_function == nullptr)
         this->status = THREAD_FINISHED;
+    else {
+        if(this->currect_function->blocked)
+            this->status = THREAD_BLOCKED;
+        else
+            this->status = THREAD_READY;
+
+        if(this->currect_function->waiting)
+            this->status = THREAD_WAITING;
+        else
+            this->status = THREAD_READY;
+        this->currect_function->waiting = false;
+    }
 
     if(this->reshedule) {
         this->reshedule = false;
         this->currect_function->anotherFunctionCalled = false;
     }
+}
+
+void Thread::joining(Thread *joiningThread) {
+    this->joiningThreads.push_back(joiningThread);
+}
+
+void Thread::unblock() {
+    this->status = THREAD_READY;
+    this->currect_function->blocked = false;
+}
+
+void Thread::receive(int value) {
+    this->recv_table.push_back(value);
 }
 
 #if DEBUG == 1
@@ -52,9 +94,7 @@ void Thread::refresh(WINDOW *window) {
 
     // add vpc
     int headerSize = 3;
-    auto vpcOffset = std::distance(this->currect_function->dtt->begin(), this->currect_function->vpc) - 1;
-    if(vpcOffset < 0)
-        vpcOffset = 0;
+    auto vpcOffset = std::distance(this->currect_function->dtt->begin(), this->currect_function->vpc);
     mvwaddstr(window, int(headerSize + vpcOffset), int(lines.at((unsigned long)headerSize + vpcOffset - 1).size() + 3), "<");
 
     // add args to code
@@ -79,10 +119,8 @@ void Thread::refresh(WINDOW *window) {
     wrefresh(window);
 }
 #endif
-/* Thread End */
 
 
-/* ThreadManager Start */
 ThreadManager::ThreadManager() {
     this->scheduler = nullptr;
     this->current_thread = nullptr;
@@ -134,12 +172,33 @@ void ThreadManager::changeScheduler(ThreadScheduler *scheduler) {
     this->scheduler->initialize();
 }
 
-Function *ThreadManager::getCurrentFunction() {
+Function *ThreadManager::getCurrentFunction(bool increment) {
+    if(increment)
+        this->current_thread->currect_function->vpc++;
     return this->current_thread->currect_function;
 }
 
 Thread* ThreadManager::getCurrentThread() {
     return this->current_thread;
+}
+
+Thread* ThreadManager::getThread(std::string threadName) {
+    auto thread = std::find_if(this->threads.begin(), this->threads.end(),
+                               [&threadName](const Thread* threadTmp) {return threadTmp->name == threadName;});
+    if(thread == this->threads.end())
+        return nullptr;
+    return *thread;
+}
+
+void ThreadManager::checkAllThreadsWaiting() {
+    for(auto it = this->threads.begin(); it != this->threads.end(); it++)
+        if((*it)->status == THREAD_READY)
+            return;
+
+    std::string threadsStatuses = "";
+    for(auto it = this->threads.begin(); it != this->threads.end(); it++)
+        threadsStatuses += "\n" + (*it)->name + " - " + threadStatusToStr((*it)->status);
+    throw VMRuntimeException("All threads blocked, statuses: " + threadsStatuses);
 }
 
 #if DEBUG == 1
@@ -153,11 +212,11 @@ void ThreadManager::refreshThreads(std::vector<WINDOW*> windows, unsigned int st
         wrefresh(windows.at((unsigned long)i));
     }
 }
+
 #endif
-/* ThreadManager End */
 
 
-/* ThreadScheduler Start */
+
 Thread *ThreadScheduler::schedule(Thread *current_thread, std::vector<Thread *> &threads) {
     if(threads.size() == 0)
         throw VMRuntimeException("Scheduling without any thread");
@@ -167,19 +226,13 @@ Thread *ThreadScheduler::schedule(Thread *current_thread, std::vector<Thread *> 
 
     if(current_thread->status == THREAD_FINISHED) {
         if(threads.size() == 1) {
-//            delete current_thread;
             threads.clear();
         } else {
             auto currentThreadIt = std::find(threads.begin(), threads.end(), current_thread);
             delete *currentThreadIt;
             threads.erase(currentThreadIt);
-            return *currentThreadIt;
         }
     }
-
-    if(threads.size() == 1)
-        return threads.at(0);
-
     return nullptr;
 }
 
@@ -192,18 +245,15 @@ FIFOScheduler::FIFOScheduler() : ThreadScheduler("FIFO") {}
 
 void FIFOScheduler::initialize(){
     if(!this->initialized) {
-        VM::setMaxBlockSize(0);
+        VM::getVM().setSchedulingFrequency(0);
         this->initialized = true;
     }
 }
 
 Thread* FIFOScheduler::schedule(Thread* current_thread, std::vector<Thread*>& threads) {
-    auto newThreadIt = ThreadScheduler::schedule(current_thread, threads);
-    if(newThreadIt != nullptr)
-        return newThreadIt;
-
-    if(threads.size() == 0)
-        return nullptr;
+    auto newThread = ThreadScheduler::schedule(current_thread, threads);
+    if(newThread != nullptr)
+    return newThread;
 
     for(auto it = threads.begin(); it != threads.end(); it++) {
         if((*it)->status != THREAD_BLOCKED)
@@ -216,28 +266,33 @@ RoundRobinScheduler::RoundRobinScheduler() : ThreadScheduler("RoundRobin") {}
 
 void RoundRobinScheduler::initialize() {
     if(!this->initialized) {
-        VM::setMaxBlockSize(5);
+        VM::getVM().setSchedulingFrequency(5);
         this->initialized = true;
     }
 }
 
 Thread* RoundRobinScheduler::schedule(Thread* current_thread, std::vector<Thread*>& threads) {
-    auto newThreadIt = ThreadScheduler::schedule(current_thread, threads);
-    if(newThreadIt != nullptr)
-        return newThreadIt;
-
-    if(threads.size() == 0)
-        return nullptr;
+    auto newThread = ThreadScheduler::schedule(current_thread, threads);
+    if(newThread != nullptr)
+        return newThread;
 
     auto currentThreadIt = std::find(threads.begin(), threads.end(), current_thread);
-    for(auto it = currentThreadIt + 1; it != currentThreadIt; it++) {
-        if(it == threads.end())
-            it = threads.begin();
+    if(currentThreadIt == threads.end())
+        currentThreadIt = threads.begin();
 
+    for(auto it = currentThreadIt + 1; it != threads.end(); it++) {
         if((*it)->status != THREAD_BLOCKED) {
             return *it;
         }
     }
+    for(auto it = threads.begin(); it != currentThreadIt; it++) {
+        if((*it)->status != THREAD_BLOCKED) {
+            return *it;
+        }
+    }
+    if((*currentThreadIt)->status != THREAD_BLOCKED) {
+        return *currentThreadIt;
+    }
     throw VMRuntimeException("All threads blocked");
 }
-/* ThreadScheduler End */
+
