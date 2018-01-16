@@ -13,7 +13,8 @@
 
 
 
-void VM::initialize(const std::string codeDirPath, const std::string defaultScheduler) {
+void VM::initialize(const std::string codeDirPath, const std::string blocksDir,
+                    const std::string defaultScheduler, bool rebuild) {
     if(!VM::isInitialized) {
         this->functionFactory = new FunctionFactory;
         this->threadManager = new ThreadManager;
@@ -26,6 +27,10 @@ void VM::initialize(const std::string codeDirPath, const std::string defaultSche
         auto schedulerSet = VM::changeScheduler(defaultScheduler);
         if(!schedulerSet)
             throw VMRuntimeException("Scheduler " + defaultScheduler + " not found");
+
+        this->rebuild = rebuild;
+        this->blocksDir = blocksDir;
+        rmdir(blocksDir.c_str());
 
         VM::isInitialized = true;
 
@@ -132,7 +137,7 @@ bool VM::changeScheduler(std::string schedulerName) {
     return false;
 }
 
-void VM::setSchedulingFrequency(int frequency) {
+void VM::setSchedulingFrequency(unsigned long frequency) {
     VM::functionFactory->setSchedulingFrequency(frequency);
 }
 

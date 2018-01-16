@@ -102,15 +102,15 @@ void Thread::refresh(WINDOW *window) {
     mvwaddstr(window, yPos, 1, "ARGS:");
     yPos += 1;
 
-    auto it = this->currect_function->dtt_args->begin();
-    for(int i = 0; i < maxArgsDisplay && it != this->currect_function->dtt_args->end(); i++, yPos++, it++) {
+    auto it = this->currect_function->dttArgs->begin();
+    for(int i = 0; i < maxArgsDisplay && it != this->currect_function->dttArgs->end(); i++, yPos++, it++) {
         std::string arg = const2str((*it).type) + "\t- ";
         if((*it).type != CONST)
             arg += (*it).valStr + " ";
         if((*it).type == VAR || (*it).type == CONST) {
             int argVal = (*it).valInt;
             if ((*it).type == VAR)
-                argVal = this->currect_function->var_table[(*it).valStr];
+                argVal = this->currect_function->varTable[(*it).valStr];
             arg += std::to_string(argVal);
         }
         mvwaddstr(window, yPos, 1, arg.c_str());

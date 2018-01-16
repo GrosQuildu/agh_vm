@@ -12,7 +12,7 @@ if(BUILD_ARM)
     set (CMAKE_CXX_COMPILER /usr/bin/arm-linux-gnueabi-g++)
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -DDEBUG=0")
 else()
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -lncurses -DDEBUG=0")
+    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -lncurses -DDEBUG=0 -ldl -g")
 endif()
 
 add_executable(VM ${VM_SOURCES})

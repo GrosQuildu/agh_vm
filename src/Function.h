@@ -20,9 +20,8 @@
 #include <iostream>
 #include <fstream>
 
-
-class Function;
-typedef void (*dtt_func)();
+typedef void (*jit_func)(void*);
+typedef std::string (*dtt_func)();
 
 typedef struct dtt_arg {
     unsigned char type;
@@ -38,27 +37,27 @@ const unsigned char THREAD = 4;
 
 const std::string argTypeToStr(unsigned char);
 
-void vm_schedule();
-void vm_assign();
-void vm_print();
-void vm_call();
-void vm_return();
-void vm_send();
-void vm_recv();
-void vm_start();
-void vm_join();
-void vm_stop();
-void vm_add();
-void vm_sub();
-void vm_div();
-void vm_mul();
+std::string vm_prolog(std::string);
+std::string vm_epilog();
+std::string vm_schedule();
+std::string vm_assign();
+std::string vm_print();
+std::string vm_call();
+std::string vm_return();
+std::string vm_send();
+std::string vm_recv();
+std::string vm_start();
+std::string vm_join();
+std::string vm_stop();
+std::string vm_add();
+std::string vm_sub();
+std::string vm_div();
+std::string vm_mul();
 
 
 static const std::string bytecodeExtension = ".pp";
 static std::map<std::string, std::pair<dtt_func, std::vector<std::set<unsigned char>>>> bytecodeMapping = {
         // BYTECODE: (function, vector({arg1type | arg1type}, {arg2type}, {arg3type}))
-        {"SCHEDULE", {vm_schedule, {{}}}},
-
         {"DECLARE", {nullptr,   { {VAR} }}},
         {"ASSIGN",  {vm_assign, { {VAR}, {VAR,CONST,ARG} }}},
         {"PRINT",   {vm_print,  { {VAR,CONST,ARG} }}},
@@ -79,19 +78,21 @@ static std::map<std::string, std::pair<dtt_func, std::vector<std::set<unsigned c
 };
 
 
+class Function;
+
 class FunctionPrototype {
 public:
-    FunctionPrototype(std::string, std::forward_list<dtt_func>*, std::forward_list<dtt_arg>*, int, std::map<std::string, int>);
+    FunctionPrototype(std::string, std::vector<dtt_func>*, std::forward_list<dtt_arg>*, int, std::map<std::string, int>);
     ~FunctionPrototype();
     Function* generate();
-    void setSchedulingBytecodes(int);
-    void clearSchedulingBytecodes();
 
     std::string name;
-    std::forward_list<dtt_func> *dtt;
-    std::forward_list<dtt_arg> *dtt_args;
-    int arg_table_size;
-    std::map<std::string, int> var_table;
+    std::vector<dtt_func> *dtt;
+    std::forward_list<dtt_arg> *dttArgs;
+    int argTableSize;
+    std::map<std::string, int> varTable;
+    std::map<unsigned long, jit_func> *jit;
+    unsigned long maxBlockSize;
 };
 
 
@@ -102,24 +103,27 @@ public:
     ~Function();
 
     void run();
+    jit_func compile();
     dtt_arg& getNextArg(bool = true);
     void setArguments(std::vector<int>);
     std::vector<std::string> toStr() const;
     friend std::ostream& operator<<(std::ostream&, const Function&);
 
     std::string name;
-    std::forward_list<dtt_func> *dtt;
-    std::forward_list<dtt_arg> *dtt_args;
-    int arg_table_size;
-    std::map<std::string, int> var_table;
+    std::vector<dtt_func> *dtt;
+    std::forward_list<dtt_arg> *dttArgs;
+    int argTableSize;
+    std::map<std::string, int> varTable;
+    unsigned long vpc;
 
-    std::forward_list<dtt_func>::iterator vpc;
+    std::map<unsigned long, jit_func> *jit;
+    unsigned long *maxBlockSizePtr;
 
     bool anotherFunctionCalled;
     bool blocked;
     bool waiting;
     Function* returnFunction;
-    std::string return_variable;
+    std::string returnVariable;
 };
 
 
@@ -156,7 +160,7 @@ public:
      */
     Function* makeFunction(std::string);  // factory method
 
-    void setSchedulingFrequency(int);
+    void setSchedulingFrequency(unsigned long);
 
 private:
     std::map<std::string, FunctionPrototype*> functionsPrototypes;
