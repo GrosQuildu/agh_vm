@@ -339,23 +339,33 @@ jit_func Function::compile() {
     if(vm.rebuild || stat((blocksDir + blockName + ".so").c_str(), &buffer) != 0) {
 
         // prepare blocks as string with cpp code to compile
-        std::array<dtt_func, 3> blockingBytecodes = {vm_call, vm_join, vm_recv};
+        std::array<dtt_func, 3> blockingBytecodes = {vm_join, vm_recv};  // must be at the beginning of the block
+        std::array<dtt_func, 1> changingContextBytecodes = {vm_call};  // must be at the end of the block
+
         unsigned long blockCounter = 0;
         std::string blocks = vm_prolog(blockName);
         bool nextIsBlockingBytecode = false;
-
-        nextIsBlockingBytecode = std::find(blockingBytecodes.begin(), blockingBytecodes.end(),
-                                           dtt->at(this->vpc + blockCounter)) != blockingBytecodes.end();
-        if(nextIsBlockingBytecode)
-            blocks += dtt->at(this->vpc + blockCounter)();
+        bool nextIsChangingContextBytecode = false;
 
         while((*this->maxBlockSizePtr == 0 || blockCounter < *this->maxBlockSizePtr) &&
-                this->vpc + blockCounter < this->dtt->size() &&
-                std::find(blockingBytecodes.begin(), blockingBytecodes.end(),
-                          dtt->at(this->vpc + blockCounter)) == blockingBytecodes.end()) {
+                this->vpc + blockCounter < this->dtt->size() ) {
+
+            nextIsBlockingBytecode = std::find(blockingBytecodes.begin(), blockingBytecodes.end(),
+                                               dtt->at(this->vpc + blockCounter)) != blockingBytecodes.end();
+            if(nextIsBlockingBytecode && blockCounter != 0)
+                break;
+
+            nextIsChangingContextBytecode = std::find(changingContextBytecodes.begin(), changingContextBytecodes.end(),
+                                               dtt->at(this->vpc + blockCounter)) != changingContextBytecodes.end();
+            if(nextIsChangingContextBytecode)
+                break;
+
             blocks += dtt->at(this->vpc + blockCounter)();
             blockCounter++;
         }
+
+        if(nextIsChangingContextBytecode)
+            blocks += dtt->at(this->vpc + blockCounter)();
 
         blocks += vm_epilog();
 
