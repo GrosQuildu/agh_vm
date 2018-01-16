@@ -30,7 +30,6 @@ void VM::initialize(const std::string codeDirPath, const std::string blocksDir,
 
         this->rebuild = rebuild;
         this->blocksDir = blocksDir;
-        rmdir(blocksDir.c_str());
 
         VM::isInitialized = true;
 
@@ -99,11 +98,11 @@ void VM::stop() {
     std::cout<<"Virtual Machines stopped\n";
 }
 
-Function* VM::getCurrentFunction(bool increment) {
+Function* VM::getCurrentFunction() {
     #if DEBUG == 1
     VM::refresh();
     #endif
-    return VM::threadManager->getCurrentFunction(increment);
+    return VM::threadManager->getCurrentFunction();
 }
 
 Thread* VM::getCurrentThread() {

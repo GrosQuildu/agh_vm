@@ -339,11 +339,20 @@ jit_func Function::compile() {
     if(vm.rebuild || stat((blocksDir + blockName + ".so").c_str(), &buffer) != 0) {
 
         // prepare blocks as string with cpp code to compile
+        std::array<dtt_func, 3> blockingBytecodes = {vm_call, vm_join, vm_recv};
         unsigned long blockCounter = 0;
         std::string blocks = vm_prolog(blockName);
+        bool nextIsBlockingBytecode = false;
 
-        while(blockCounter < *this->maxBlockSizePtr && this->vpc + blockCounter < this->dtt->size() &&
-                dtt->at(this->vpc + blockCounter) != vm_join && dtt->at(this->vpc + blockCounter) != vm_recv) {
+        nextIsBlockingBytecode = std::find(blockingBytecodes.begin(), blockingBytecodes.end(),
+                                           dtt->at(this->vpc + blockCounter)) != blockingBytecodes.end();
+        if(nextIsBlockingBytecode)
+            blocks += dtt->at(this->vpc + blockCounter)();
+
+        while((*this->maxBlockSizePtr == 0 || blockCounter < *this->maxBlockSizePtr) &&
+                this->vpc + blockCounter < this->dtt->size() &&
+                std::find(blockingBytecodes.begin(), blockingBytecodes.end(),
+                          dtt->at(this->vpc + blockCounter)) == blockingBytecodes.end()) {
             blocks += dtt->at(this->vpc + blockCounter)();
             blockCounter++;
         }
@@ -516,7 +525,7 @@ class VM {
 public:
     void checkAllThreadsWaiting();
 
-    Function* getCurrentFunction(bool = true);
+    Function* getCurrentFunction();
     Function* getNewFunction(std::string);
 
     Thread* getNewThread(std::string, std::string);
@@ -603,6 +612,7 @@ std::string vm_call(){
 
     vm.getCurrentThread()->currect_function = newFunction;
     currentFunction->vpc++;
+    return;
     })END";
 };
 std::string vm_return(){

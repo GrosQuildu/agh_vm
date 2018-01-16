@@ -35,7 +35,6 @@ public:
     unsigned char status;
     std::vector<int> recv_table;
     std::vector<Thread*> joiningThreads;
-    bool reshedule;
 
     #if DEBUG == 1
     void refresh(WINDOW*);
@@ -92,7 +91,7 @@ public:
     void changeScheduler(ThreadScheduler*);
     void checkAllThreadsWaiting();
 
-    Function* getCurrentFunction(bool);
+    Function* getCurrentFunction();
     Thread* getCurrentThread();
     Thread* getThread(std::string);
 

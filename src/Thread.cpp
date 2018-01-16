@@ -25,7 +25,6 @@ Thread::Thread(std::string name, Function *currect_function) {
     this->name = name;
     this->currect_function = currect_function;
     this->status = THREAD_READY;
-    this->reshedule = false;
 }
 
 Thread::~Thread() {
@@ -40,8 +39,7 @@ Thread::~Thread() {
 }
 
 void Thread::run() {
-    while(this->currect_function != nullptr && !this->reshedule &&
-            !this->currect_function->blocked && !this->currect_function->waiting)
+    if(this->currect_function != nullptr)
         this->currect_function->run();
 
     if(this->currect_function == nullptr)
@@ -49,18 +47,11 @@ void Thread::run() {
     else {
         if(this->currect_function->blocked)
             this->status = THREAD_BLOCKED;
-        else
-            this->status = THREAD_READY;
-
-        if(this->currect_function->waiting)
+        else if(this->currect_function->waiting)
             this->status = THREAD_WAITING;
         else
             this->status = THREAD_READY;
         this->currect_function->waiting = false;
-    }
-
-    if(this->reshedule) {
-        this->reshedule = false;
         this->currect_function->anotherFunctionCalled = false;
     }
 }
@@ -172,9 +163,7 @@ void ThreadManager::changeScheduler(ThreadScheduler *scheduler) {
     this->scheduler->initialize();
 }
 
-Function *ThreadManager::getCurrentFunction(bool increment) {
-    if(increment)
-        this->current_thread->currect_function->vpc++;
+Function *ThreadManager::getCurrentFunction() {
     return this->current_thread->currect_function;
 }
 
@@ -256,7 +245,7 @@ Thread* FIFOScheduler::schedule(Thread* current_thread, std::vector<Thread*>& th
     return newThread;
 
     for(auto it = threads.begin(); it != threads.end(); it++) {
-        if((*it)->status != THREAD_BLOCKED)
+        if((*it)->status == THREAD_READY)
             return *it;
     }
     throw VMRuntimeException("All threads blocked");
@@ -286,7 +275,7 @@ Thread* RoundRobinScheduler::schedule(Thread* current_thread, std::vector<Thread
         }
     }
     for(auto it = threads.begin(); it != currentThreadIt; it++) {
-        if((*it)->status != THREAD_BLOCKED) {
+        if((*it)->status == THREAD_READY) {
             return *it;
         }
     }

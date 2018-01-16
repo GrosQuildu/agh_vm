@@ -24,7 +24,7 @@ public:
     void stop();
     void checkAllThreadsWaiting();
 
-    Function* getCurrentFunction(bool = true);
+    Function* getCurrentFunction();
     Function* getNewFunction(std::string);
 
     Thread* getNewThread(std::string, std::string);
