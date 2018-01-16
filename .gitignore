@@ -1,5 +1,11 @@
 *.pyc
 .idea
+
 cmake-build-debug/*
 build
+
+# binary
 VM
+
+# dir for compiled blocks
+blocks/
