@@ -41,20 +41,23 @@ public:
     bool rebuild;
     std::string blocksDir;
 
+    #if DEBUG == 1
+    int threadWinWidth;
+    int threadWinHeight;
+    int threadWinMargin;
+
+    void refresh();
+    #endif
+
 private:
     bool isInitialized;
     FunctionFactory *functionFactory;
     ThreadManager *threadManager;
     std::vector<ThreadScheduler*> *threadSchedulers;
 
-    int ThreadWinWidth;
-    int ThreadWinHeight;
-    int ThreadWinMargin;
-
     #if DEBUG == 1
     std::vector<WINDOW*> windows;
     WINDOW* terminal;
-    void refresh();
     #endif
 };
 

@@ -11,8 +11,6 @@
 #include <unistd.h>
 
 
-
-
 void VM::initialize(const std::string codeDirPath, const std::string blocksDir,
                     const std::string defaultScheduler, bool rebuild) {
     if(!VM::isInitialized) {
@@ -34,15 +32,12 @@ void VM::initialize(const std::string codeDirPath, const std::string blocksDir,
         VM::isInitialized = true;
 
         #if DEBUG == 1
-        this->ThreadWinWidth = 30;
-        this->ThreadWinHeight = 35;
-        this->ThreadWinMargin = 2;
-
         initscr();
         cbreak();
         nodelay(stdscr, TRUE);
         keypad(stdscr, FALSE);
         noecho();
+        curs_set(0);
 
         start_color();
         init_pair(1, COLOR_MAGENTA, COLOR_BLACK);
@@ -53,16 +48,23 @@ void VM::initialize(const std::string codeDirPath, const std::string blocksDir,
         init_pair(6, COLOR_YELLOW, COLOR_BLACK);
         init_pair(7, COLOR_RED, COLOR_BLACK);
 
+        wbkgd(stdscr, COLOR_PAIR(1));
+        bkgd(COLOR_PAIR(1));
 
-        int windowsAmount = COLS / (VM::ThreadWinWidth + VM::ThreadWinMargin);
-        if (windowsAmount * (VM::ThreadWinWidth + VM::ThreadWinMargin) + VM::ThreadWinMargin > COLS)
+        int terminalHeight = 10;
+        this->threadWinWidth = 30;
+        this->threadWinHeight = LINES - terminalHeight;
+        this->threadWinMargin = 2;
+
+        int windowsAmount = COLS / (VM::threadWinWidth + VM::threadWinMargin);
+        if (windowsAmount * (VM::threadWinWidth + VM::threadWinMargin) + VM::threadWinMargin > COLS)
             windowsAmount--;
         for (int i = 0; i < windowsAmount; i++)
-            VM::windows.push_back(newwin(VM::ThreadWinHeight, VM::ThreadWinWidth, VM::ThreadWinMargin,
-                                             (VM::ThreadWinWidth + VM::ThreadWinMargin) * i + VM::ThreadWinMargin));
+            VM::windows.push_back(newwin(VM::threadWinHeight, VM::threadWinWidth, VM::threadWinMargin,
+                                             (VM::threadWinWidth + VM::threadWinMargin) * i + VM::threadWinMargin));
 
-        VM::terminal = newwin(LINES - VM::ThreadWinHeight - VM::ThreadWinMargin, COLS - 2*VM::ThreadWinMargin,
-                              VM::ThreadWinHeight + VM::ThreadWinMargin, VM::ThreadWinMargin);
+        VM::terminal = newwin(LINES - VM::threadWinHeight - VM::threadWinMargin, COLS - 2*VM::threadWinMargin,
+                              VM::threadWinHeight + VM::threadWinMargin, VM::threadWinMargin);
         box(VM::terminal, 0 , 0);
         mvwaddstr(VM::terminal, 1, 1, "TERMINAL:");
         wrefresh(VM::terminal);
@@ -142,9 +144,13 @@ void VM::setSchedulingFrequency(unsigned long frequency) {
 
 void VM::print(std::string value) {
     #if DEBUG == 1
-    mvwaddstr(VM::terminal, 3, 1, "");
+    wclear(VM::terminal);
+    box(VM::terminal, 0 , 0);
+    mvwaddstr(VM::terminal, 1, 1, "TERMINAL:");
+
     mvwaddstr(VM::terminal, 3, 1, value.c_str());
     wrefresh(VM::terminal);
+    usleep(5 * 100000);
     #else
     std::cout<<value<<std::endl;
     #endif

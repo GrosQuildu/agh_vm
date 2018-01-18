@@ -67,6 +67,9 @@ void Thread::unblock() {
 
 void Thread::receive(int value) {
     this->recvTable.push_back(value);
+    #if DEBUG == 1
+    VM::getVM().refresh();
+    #endif
 }
 
 #if DEBUG == 1
@@ -74,8 +77,11 @@ void Thread::refresh(WINDOW *window) {
     wclear(window);
     box(window, 0 , 0);
 
-    int maxCodeLinesDisplay = 30;
-    int maxArgsDisplay = 10;
+    auto threadWinHeight = VM::getVM().threadWinHeight;
+    threadWinHeight -= 4;
+    int maxCodeLinesDisplay = (int)(threadWinHeight * 0.5);
+    int maxArgsDisplay = (int)(threadWinHeight * 0.25);
+    int maxRecvDisplay = (int)(threadWinHeight * 0.25);
 
     // add name and code
     auto lines = this->currentFunction->toStr();
@@ -83,29 +89,43 @@ void Thread::refresh(WINDOW *window) {
     for(int i = 0; i < maxCodeLinesDisplay && yPos - 1 < lines.size(); yPos++, i++)
         mvwaddstr(window, yPos, 1, lines.at((unsigned long)yPos-1).c_str());
 
+    mvwaddstr(window, 1, (int)lines.at(0).size() + 2, (std::string("[" + this->name) + "]").c_str());
+
     // add vpc
     int headerSize = 3;
-    auto vpcOffset = std::distance(this->currentFunction->dtt->begin(), this->currentFunction->vpc);
-    mvwaddstr(window, int(headerSize + vpcOffset), int(lines.at((unsigned long)headerSize + vpcOffset - 1).size() + 3), "<");
+    mvwaddstr(window, int(headerSize + this->currentFunction->vpc),
+              int(lines.at((unsigned long)headerSize + this->currentFunction->vpc - 1).size() + 3), "<");
 
     // add args to code
     yPos += 2;
     mvwaddstr(window, yPos, 1, "ARGS:");
     yPos += 1;
 
-    auto it = this->currentFunction->dttArgs->begin();
-    for(int i = 0; i < maxArgsDisplay && it != this->currentFunction->dttArgs->end(); i++, yPos++, it++) {
-        std::string arg = const2str((*it).type) + "\t- ";
-        if((*it).type != CONST)
-            arg += (*it).valStr + " ";
-        if((*it).type == VAR || (*it).type == CONST) {
-            int argVal = (*it).valInt;
-            if ((*it).type == VAR)
-                argVal = this->currentFunction->varTable[(*it).valStr];
+    auto dttArgsDispIt = this->currentFunction->dttArgsIt;
+    for(int i = 0; i < maxArgsDisplay && dttArgsDispIt != this->currentFunction->dttArgs->end(); i++, yPos++, dttArgsDispIt++) {
+        std::string arg = argTypeToStr((*dttArgsDispIt).type) + "\t- ";
+        if((*dttArgsDispIt).type != CONST)
+            arg += (*dttArgsDispIt).valStr + " ";
+        if((*dttArgsDispIt).type == VAR || (*dttArgsDispIt).type == CONST) {
+            int argVal = (*dttArgsDispIt).valInt;
+            if ((*dttArgsDispIt).type == VAR)
+                argVal = this->currentFunction->varTable[(*dttArgsDispIt).valStr];
             arg += std::to_string(argVal);
         }
         mvwaddstr(window, yPos, 1, arg.c_str());
     }
+
+    // add recv table
+    yPos += 2;
+    mvwaddstr(window, yPos, 1, "RECV: [");
+    yPos += 1;
+
+    auto recvTableDispIt = this->recvTable.begin();
+    for(int i = 0; i < maxRecvDisplay && recvTableDispIt != this->recvTable.end(); i++, yPos++, recvTableDispIt++) {
+        std::string arg = "\t" + std::to_string(*recvTableDispIt);
+        mvwaddstr(window, yPos, 1, arg.c_str());
+    }
+    mvwaddstr(window, yPos, 1, "]");
 
     wrefresh(window);
 }
