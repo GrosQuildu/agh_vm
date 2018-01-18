@@ -242,7 +242,10 @@ void FIFOScheduler::initialize(){
 Thread* FIFOScheduler::schedule(Thread* current_thread, std::vector<Thread*>& threads) {
     auto newThread = ThreadScheduler::schedule(current_thread, threads);
     if(newThread != nullptr)
-    return newThread;
+        return newThread;
+
+    if(threads.empty())
+        return nullptr;
 
     for(auto it = threads.begin(); it != threads.end(); it++) {
         if((*it)->status == THREAD_READY)
@@ -264,6 +267,9 @@ Thread* RoundRobinScheduler::schedule(Thread* current_thread, std::vector<Thread
     auto newThread = ThreadScheduler::schedule(current_thread, threads);
     if(newThread != nullptr)
         return newThread;
+
+    if(threads.empty())
+        return nullptr;
 
     auto currentThreadIt = std::find(threads.begin(), threads.end(), current_thread);
     if(currentThreadIt == threads.end())
