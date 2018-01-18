@@ -659,7 +659,9 @@ std::string vm_send(){
     if(arg1.type == VAR)
         val1 = currentFunction->varTable.at(arg1.valStr);
 
-    vm.getThread(arg0.valStr)->receive(val1);
+    auto thread = vm.getThread(arg0.valStr);
+    if(thread != nullptr)
+        thread->receive(val1);
     currentFunction->vpc++;
     })END";
 };
