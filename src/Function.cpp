@@ -381,12 +381,12 @@ jit_func Function::compile() {
         std::ofstream(blocksDir + blockName + ".cpp") << blocks;
 
         // run external compiler
-        auto compilerCommand = "g++ -g -c -fPIC -o " + blocksDir + blockName + ".o  " + blocksDir + blockName + ".cpp";
+        std::string compilerCommand = std::string(CXX_COMPILER) + " -g -c -fPIC -o " + blocksDir + blockName + ".o  " + blocksDir + blockName + ".cpp";
         vm.print("Compiling with: " + compilerCommand);
         if(std::system(compilerCommand.c_str()) != 0)
             throw VMRuntimeException("Compiler error");
 
-        compilerCommand = "g++ -g -shared -o " + blocksDir + blockName + ".so  " + blocksDir + blockName + ".o";
+        compilerCommand = std::string(CXX_COMPILER) + " -g -shared -o " + blocksDir + blockName + ".so  " + blocksDir + blockName + ".o";
         vm.print("Compiling with: " + compilerCommand);
         if(std::system(compilerCommand.c_str()) != 0)
             throw VMRuntimeException("Compiler error");
