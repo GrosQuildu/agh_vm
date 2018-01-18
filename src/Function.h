@@ -41,23 +41,24 @@ const std::string argTypeToStr(unsigned char);
 static const std::string bytecodeExtension = ".pp";
 static std::map<std::string, std::pair<dtt_func, std::vector<std::set<unsigned char>>>> bytecodeMapping = {
         // BYTECODE: (function, vector({arg1type | arg1type}, {arg2type}, {arg3type}))
-        {"DECLARE", {nullptr,   { {VAR} }}},
-        {"ASSIGN",  {vm_assign, { {VAR}, {VAR,CONST,ARG} }}},
-        {"PRINT",   {vm_print,  { {VAR,CONST,ARG} }}},
+        {"DECLARE",  {nullptr,     { {VAR} }}},
+        {"ASSIGN",   {vm_assign,   { {VAR}, {VAR,CONST,ARG} }}},
+        {"PRINT",    {vm_print,    { {VAR,CONST,ARG} }}},
 
-        {"CALL",    {vm_call,   { {FUNC}, {VAR}, {} }}},
-        {"RETURN",  {vm_return, { {VAR,CONST,ARG} }}},
+        {"CALL",     {vm_call,     { {FUNC}, {VAR}, {} }}},
+        {"RETURN",   {vm_return,   { {VAR,CONST,ARG} }}},
 
-        {"SEND",    {vm_send,   { {THREAD}, {VAR,CONST,ARG} }}},
-        {"RECV",    {vm_recv,   { {VAR} }}},
-        {"START",   {vm_start,  { {FUNC}, {THREAD}, {} }}},
-        {"JOIN",    {vm_join,   { {THREAD} }}},
-        {"STOP",    {vm_stop,   { {THREAD} }}},
+        {"SEND",     {vm_send,     { {THREAD}, {VAR,CONST,ARG} }}},
+        {"RECV",     {vm_recv,     { {VAR} }}},
+        {"START",    {vm_start,    { {FUNC}, {THREAD}, {} }}},
+        {"JOIN",     {vm_join,     { {THREAD} }}},
+        {"STOP",     {vm_stop,     { {THREAD} }}},
+        {"PRIORITY", {vm_priority, { {THREAD}, {VAR,CONST,ARG} }}},
 
-        {"ADD",     {vm_add,    { {VAR}, {VAR,CONST,ARG}, {VAR,CONST,ARG} }}},
-        {"SUB",     {vm_sub,    { {VAR}, {VAR,CONST,ARG}, {VAR,CONST,ARG} }}},
-        {"DIV",     {vm_div,    { {VAR}, {VAR,CONST,ARG}, {VAR,CONST,ARG} }}},
-        {"MUL",     {vm_mul,    { {VAR}, {VAR,CONST,ARG}, {VAR,CONST,ARG} }}},
+        {"ADD",      {vm_add,      { {VAR}, {VAR,CONST,ARG}, {VAR,CONST,ARG} }}},
+        {"SUB",      {vm_sub,      { {VAR}, {VAR,CONST,ARG}, {VAR,CONST,ARG} }}},
+        {"DIV",      {vm_div,      { {VAR}, {VAR,CONST,ARG}, {VAR,CONST,ARG} }}},
+        {"MUL",      {vm_mul,      { {VAR}, {VAR,CONST,ARG}, {VAR,CONST,ARG} }}},
 };
 
 

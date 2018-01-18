@@ -25,6 +25,10 @@ Thread::Thread(std::string name, Function *currectFunction) {
     this->name = name;
     this->currentFunction = currectFunction;
     this->status = THREAD_READY;
+    this->priority = 5;
+    #if DEBUG == 1
+    this->currentColor = false;
+    #endif
 }
 
 Thread::~Thread() {
@@ -84,12 +88,25 @@ void Thread::refresh(WINDOW *window) {
     int maxRecvDisplay = (int)(threadWinHeight * 0.25);
 
     // add name and code
+    if(currentColor)
+        wattron(window, COLOR_PAIR(3));
+    else
+        wattron(window, COLOR_PAIR(5));
+
     auto lines = this->currentFunction->toStr();
     unsigned int yPos = 1;
     for(int i = 0; i < maxCodeLinesDisplay && yPos - 1 < lines.size(); yPos++, i++)
         mvwaddstr(window, yPos, 1, lines.at((unsigned long)yPos-1).c_str());
 
-    mvwaddstr(window, 1, (int)lines.at(0).size() + 2, (std::string("[" + this->name) + "]").c_str());
+    if(currentColor)
+        wattron(window, COLOR_PAIR(3));
+    else
+        wattron(window, COLOR_PAIR(5));
+    currentColor = !currentColor;
+
+    // add code
+    mvwaddstr(window, 1, (int)lines.at(0).size() + 2,
+              (std::string("[" + this->name) + " | " + std::to_string(this->priority) + "]").c_str());
 
     // add vpc
     int headerSize = 3;
@@ -279,6 +296,7 @@ Thread* FIFOScheduler::schedule(Thread* currentThread, std::vector<Thread*>& thr
     throw VMRuntimeException("All threads blocked");
 }
 
+
 RoundRobinScheduler::RoundRobinScheduler() : ThreadScheduler("RoundRobin") {}
 
 void RoundRobinScheduler::initialize() {
@@ -295,6 +313,9 @@ Thread* RoundRobinScheduler::schedule(Thread* currentThread, std::vector<Thread*
 
     if(threads.empty())
         return nullptr;
+
+    if(currentThread == nullptr || std::find(threads.begin(), threads.end(), currentThread) == threads.end())
+        currentThread = threads.at(0);
 
     auto currentThreadIt = std::find(threads.begin(), threads.end(), currentThread);
     if(currentThreadIt == threads.end())
@@ -316,3 +337,44 @@ Thread* RoundRobinScheduler::schedule(Thread* currentThread, std::vector<Thread*
     throw VMRuntimeException("All threads blocked");
 }
 
+
+PriorityScheduler::PriorityScheduler() : ThreadScheduler("Priority") {}
+
+void PriorityScheduler::initialize() {
+    if(!this->initialized) {
+        VM::getVM().setSchedulingFrequency(5);
+        this->initialized = true;
+    }
+}
+
+Thread* PriorityScheduler::schedule(Thread* currentThread, std::vector<Thread*>& threads) {
+    auto newThread = ThreadScheduler::schedule(currentThread, threads);
+    if(newThread != nullptr)
+        return newThread;
+
+    if(threads.empty())
+        return nullptr;
+
+    if(currentThread == nullptr || std::find(threads.begin(), threads.end(), currentThread) == threads.end())
+        currentThread = threads.at(0);
+
+    std::vector<Thread*> equalPriorityThreads;
+    for(auto it = threads.begin(); it != threads.end(); it++) {
+        if((*it)->priority > currentThread->priority)
+            return *it;
+        else if((*it)->priority == currentThread->priority)
+            equalPriorityThreads.push_back(*it);
+    }
+
+    std::sort( equalPriorityThreads.begin( ), equalPriorityThreads.end( ), [ ]( const Thread* lhs, const Thread* rhs ) {
+        return lhs->name < rhs->name;
+    });
+
+    auto currentThreadIt = std::find_if(equalPriorityThreads.begin(), equalPriorityThreads.end(),
+                           [&currentThread](const Thread* obj) {return obj == currentThread;});
+    currentThreadIt++;
+    if(currentThreadIt == equalPriorityThreads.end())
+        return equalPriorityThreads.at(0);
+    else
+        return *currentThreadIt;
+}

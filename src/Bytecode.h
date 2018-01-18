@@ -19,6 +19,7 @@ std::string vm_recv();
 std::string vm_start();
 std::string vm_join();
 std::string vm_stop();
+std::string vm_priority();
 std::string vm_add();
 std::string vm_sub();
 std::string vm_div();

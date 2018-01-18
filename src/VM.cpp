@@ -22,6 +22,8 @@ void VM::initialize(const std::string codeDirPath, const std::string blocksDir,
 
         VM::threadSchedulers->push_back(new RoundRobinScheduler());
         VM::threadSchedulers->push_back(new FIFOScheduler());
+        VM::threadSchedulers->push_back(new PriorityScheduler());
+
         auto schedulerSet = VM::changeScheduler(defaultScheduler);
         if(!schedulerSet)
             throw VMRuntimeException("Scheduler " + defaultScheduler + " not found");
@@ -52,7 +54,7 @@ void VM::initialize(const std::string codeDirPath, const std::string blocksDir,
         bkgd(COLOR_PAIR(1));
 
         int terminalHeight = 10;
-        this->threadWinWidth = 30;
+        this->threadWinWidth = 35;
         this->threadWinHeight = LINES - terminalHeight;
         this->threadWinMargin = 2;
 

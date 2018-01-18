@@ -90,7 +90,12 @@ public:
     unsigned char status;
     std::vector<int> recvTable;
     std::vector<Thread*> joiningThreads;
-    bool reshedule;
+    unsigned int priority;
+
+    #if DEBUG == 1
+    void refresh(WINDOW*);
+    bool currentColor;
+    #endif
 };
 
 class VM {
@@ -295,6 +300,17 @@ std::string vm_stop(){
 
     vm.stopThread(arg0.valStr);
     currentFunction->vpc++;
+    )END";
+};
+std::string vm_priority(){
+    return R"END(
+    // vm_priority
+    arg0 = currentFunction->getNextArg();
+    arg1 = currentFunction->getNextArg();
+
+    thread = vm.getThread(arg0.valStr);
+    if(thread != nullptr && arg1.valInt >= 1 && arg1.valInt <= 10)
+        thread->priority = arg1.valInt;
     )END";
 };
 

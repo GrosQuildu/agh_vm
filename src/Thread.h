@@ -35,9 +35,11 @@ public:
     unsigned char status;
     std::vector<int> recvTable;
     std::vector<Thread*> joiningThreads;
+    unsigned int priority;
 
     #if DEBUG == 1
     void refresh(WINDOW*);
+    bool currentColor;
     #endif
 };
 
@@ -76,6 +78,12 @@ public:
     Thread* schedule(Thread*, std::vector<Thread*>&);
 };
 
+class PriorityScheduler : public ThreadScheduler {
+public:
+    PriorityScheduler();
+    void initialize();
+    Thread* schedule(Thread*, std::vector<Thread*>&);
+};
 
 
 class ThreadManager {
