@@ -14,6 +14,7 @@
 
 #include "Exceptions.h"
 #include "Helpers.h"
+#include "Bytecode.h"
 
 #include <dirent.h>
 #include <sstream>
@@ -36,24 +37,6 @@ const unsigned char FUNC = 3;
 const unsigned char THREAD = 4;
 
 const std::string argTypeToStr(unsigned char);
-
-std::string vm_prolog(std::string);
-std::string vm_epilog();
-std::string vm_schedule();
-std::string vm_assign();
-std::string vm_print();
-std::string vm_call();
-std::string vm_return();
-std::string vm_send();
-std::string vm_recv();
-std::string vm_start();
-std::string vm_join();
-std::string vm_stop();
-std::string vm_add();
-std::string vm_sub();
-std::string vm_div();
-std::string vm_mul();
-
 
 static const std::string bytecodeExtension = ".pp";
 static std::map<std::string, std::pair<dtt_func, std::vector<std::set<unsigned char>>>> bytecodeMapping = {
