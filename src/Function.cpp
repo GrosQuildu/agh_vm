@@ -131,6 +131,8 @@ std::pair<FunctionPrototype*, std::forward_list<std::tuple<std::string, int, int
         } catch(std::invalid_argument) {
             throw ParserException("Incorrect ARGS_COUNT in DEF");
         }
+        if(arg_table_size < 0)
+            throw ParserException("Negative ARGS_COUNT in DEF");
     }
 
     // DEFINE -  declarations of variables
@@ -240,7 +242,7 @@ void FunctionFactory::initialize(std::string codeDirPath) {
 
         FunctionPrototype* fp = this->functionsPrototypes[functionToCheckName];
         if(fp->argTableSize != functionArgumentsCount) {
-            std::string errorMsg = "Function " + functionToCheckName + " called with wrong number of argument";
+            std::string errorMsg = "Function " + functionToCheckName + " called with wrong number of arguments";
             errorMsg += "\nHave: " + std::to_string(functionArgumentsCount);
             errorMsg += "\nShould be: " + std::to_string(fp->argTableSize);
             throw ParserException(errorMsg);
