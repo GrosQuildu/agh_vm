@@ -131,6 +131,11 @@ void ThreadManager::clearAll() {
 }
 
 Thread* ThreadManager::addThread(std::string threadName, Function* threadFunction) {
+    auto threadExists = std::find_if(this->threads.begin(), this->threads.end(),
+                               [&threadName](const Thread* threadTmp) {return threadTmp->name == threadName;});
+    if(threadExists != this->threads.end())
+        throw VMRuntimeException("Thread with name " + threadName + " already exists");
+
     auto thread = new Thread(threadName, threadFunction);
     this->threads.push_back(thread);
     return thread;
