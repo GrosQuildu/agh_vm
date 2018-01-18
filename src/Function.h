@@ -112,6 +112,7 @@ public:
     std::string name;
     std::vector<dtt_func> *dtt;
     std::forward_list<dtt_arg> *dttArgs;
+    std::forward_list<dtt_arg>::iterator dttArgsIt;
     int argTableSize;
     std::map<std::string, int> varTable;
     unsigned long vpc;
