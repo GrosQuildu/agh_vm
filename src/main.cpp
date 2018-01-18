@@ -11,7 +11,7 @@ using namespace std;
 int main() {
     cout<<"Start\n";
 
-    auto codeDir = "/home/gros/studia/eaiib_3/wzorce/virtual_machine/example_program/";
+    auto codeDir = "/home/gros/studia/eaiib_3/wzorce/virtual_machine/example_programs/test_threads_send_recv/";
     auto blocksDir = "/home/gros/studia/eaiib_3/wzorce/virtual_machine/blocks/";
     auto defaultScheduler = "RoundRobin";
     auto rebuild = true;

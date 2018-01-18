@@ -2,7 +2,81 @@ DEF MAIN 0
 DECLARE ZMIENNA1
 DECLARE ZMIENNA2
 
+LOADV ZMIENNA1
+LOAD 33
+ASSIGN
 
+# start thread without arguments
+LOADF FUNKCJA_TESTOWA1
+LOADT WATEK1
+START
+
+# start thread wit arguments
+LOADF FUNKCJA_TESTOWA2
+LOADT WATEK2
+LOADV ZMIENNA1
+LOAD 10
+START
+
+# stop and join thread WATEK1, join should not block
+LOADT WATEK1
+STOP
+
+LOADT WATEK1
+JOIN
+
+# stop non existing thread, should not block
+LOADT NIEISTNIEJACY_WATEK
+STOP
+
+# join non existing thread, should not block
+LOADT NIEISTNIEJACY_WATEK
+JOIN
+
+# start thread that start threads
+LOADF FUNKCJA_TESTOWA3
+LOADT WATEK3
+START
+
+# join thread WATEK3, should block until it ends
+LOAD 1
+PRINT
+
+LOAD 2
+PRINT
+
+LOAD 3
+PRINT
+
+LOAD 4
+PRINT
+
+LOAD 5
+PRINT
+
+LOAD 6
+PRINT
+
+LOADT WATEK3
+JOIN
+
+LOAD 7
+PRINT
+
+LOAD 8
+PRINT
+
+LOAD 9
+PRINT
+
+LOAD 10
+PRINT
+
+LOAD 11
+PRINT
+
+LOAD 12
+PRINT
 
 LOAD 0
 RETURN
