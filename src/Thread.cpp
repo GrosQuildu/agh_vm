@@ -21,38 +21,38 @@ const std::string threadStatusToStr(unsigned char c) {
 }
 
 
-Thread::Thread(std::string name, Function *currect_function) {
+Thread::Thread(std::string name, Function *currectFunction) {
     this->name = name;
-    this->currect_function = currect_function;
+    this->currentFunction = currectFunction;
     this->status = THREAD_READY;
 }
 
 Thread::~Thread() {
-    while(this->currect_function != nullptr) {
-        auto previousFunction = currect_function->returnFunction;
-        currect_function->returnFunction = nullptr;
-        delete currect_function;
-        currect_function = previousFunction;
+    while(this->currentFunction != nullptr) {
+        auto previousFunction = currentFunction->returnFunction;
+        currentFunction->returnFunction = nullptr;
+        delete currentFunction;
+        currentFunction = previousFunction;
     }
     for(auto it = this->joiningThreads.begin(); it != joiningThreads.end(); it++)
         (*it)->unblock();
 }
 
 void Thread::run() {
-    if(this->currect_function != nullptr)
-        this->currect_function->run();
+    if(this->currentFunction != nullptr)
+        this->currentFunction->run();
 
-    if(this->currect_function == nullptr)
+    if(this->currentFunction == nullptr)
         this->status = THREAD_FINISHED;
     else {
-        if(this->currect_function->blocked)
+        if(this->currentFunction->blocked)
             this->status = THREAD_BLOCKED;
-        else if(this->currect_function->waiting)
+        else if(this->currentFunction->waiting)
             this->status = THREAD_WAITING;
         else
             this->status = THREAD_READY;
-        this->currect_function->waiting = false;
-        this->currect_function->anotherFunctionCalled = false;
+        this->currentFunction->waiting = false;
+        this->currentFunction->anotherFunctionCalled = false;
     }
 }
 
@@ -62,11 +62,11 @@ void Thread::joining(Thread *joiningThread) {
 
 void Thread::unblock() {
     this->status = THREAD_READY;
-    this->currect_function->blocked = false;
+    this->currentFunction->blocked = false;
 }
 
 void Thread::receive(int value) {
-    this->recv_table.push_back(value);
+    this->recvTable.push_back(value);
 }
 
 #if DEBUG == 1
@@ -78,14 +78,14 @@ void Thread::refresh(WINDOW *window) {
     int maxArgsDisplay = 10;
 
     // add name and code
-    auto lines = this->currect_function->toStr();
+    auto lines = this->currentFunction->toStr();
     unsigned int yPos = 1;
     for(int i = 0; i < maxCodeLinesDisplay && yPos - 1 < lines.size(); yPos++, i++)
         mvwaddstr(window, yPos, 1, lines.at((unsigned long)yPos-1).c_str());
 
     // add vpc
     int headerSize = 3;
-    auto vpcOffset = std::distance(this->currect_function->dtt->begin(), this->currect_function->vpc);
+    auto vpcOffset = std::distance(this->currentFunction->dtt->begin(), this->currentFunction->vpc);
     mvwaddstr(window, int(headerSize + vpcOffset), int(lines.at((unsigned long)headerSize + vpcOffset - 1).size() + 3), "<");
 
     // add args to code
@@ -93,15 +93,15 @@ void Thread::refresh(WINDOW *window) {
     mvwaddstr(window, yPos, 1, "ARGS:");
     yPos += 1;
 
-    auto it = this->currect_function->dttArgs->begin();
-    for(int i = 0; i < maxArgsDisplay && it != this->currect_function->dttArgs->end(); i++, yPos++, it++) {
+    auto it = this->currentFunction->dttArgs->begin();
+    for(int i = 0; i < maxArgsDisplay && it != this->currentFunction->dttArgs->end(); i++, yPos++, it++) {
         std::string arg = const2str((*it).type) + "\t- ";
         if((*it).type != CONST)
             arg += (*it).valStr + " ";
         if((*it).type == VAR || (*it).type == CONST) {
             int argVal = (*it).valInt;
             if ((*it).type == VAR)
-                argVal = this->currect_function->varTable[(*it).valStr];
+                argVal = this->currentFunction->varTable[(*it).valStr];
             arg += std::to_string(argVal);
         }
         mvwaddstr(window, yPos, 1, arg.c_str());
@@ -114,7 +114,7 @@ void Thread::refresh(WINDOW *window) {
 
 ThreadManager::ThreadManager() {
     this->scheduler = nullptr;
-    this->current_thread = nullptr;
+    this->currentThread = nullptr;
 }
 
 ThreadManager::~ThreadManager() {
@@ -145,7 +145,7 @@ void ThreadManager::removeThread(std::string threadName) {
     auto thread = std::find_if(this->threads.begin(), this->threads.end(),
                            [&threadName](const Thread* threadTmp) {return threadTmp->name == threadName;});
     if(thread != this->threads.end()) {
-        if(this->current_thread == *thread)
+        if(this->currentThread == *thread)
             throw VMRuntimeException("Can't delete currently running thread");
         delete *thread;
         this->threads.erase(thread);
@@ -157,9 +157,9 @@ void ThreadManager::schedule() {
         throw VMRuntimeException("No threads in ThreadManager");
 
     while(this->threads.size() > 0) {
-        this->current_thread = this->scheduler->schedule(this->current_thread, this->threads);
-        if(this->current_thread != nullptr)
-            this->current_thread->run();
+        this->currentThread = this->scheduler->schedule(this->currentThread, this->threads);
+        if(this->currentThread != nullptr)
+            this->currentThread->run();
     }
 }
 
@@ -169,11 +169,11 @@ void ThreadManager::changeScheduler(ThreadScheduler *scheduler) {
 }
 
 Function *ThreadManager::getCurrentFunction() {
-    return this->current_thread->currect_function;
+    return this->currentThread->currentFunction;
 }
 
 Thread* ThreadManager::getCurrentThread() {
-    return this->current_thread;
+    return this->currentThread;
 }
 
 Thread* ThreadManager::getThread(std::string threadName) {
@@ -211,18 +211,18 @@ void ThreadManager::refreshThreads(std::vector<WINDOW*> windows, unsigned int st
 
 
 
-Thread *ThreadScheduler::schedule(Thread *current_thread, std::vector<Thread *> &threads) {
+Thread *ThreadScheduler::schedule(Thread *currentThread, std::vector<Thread *> &threads) {
     if(threads.size() == 0)
         throw VMRuntimeException("Scheduling without any thread");
 
-    if(current_thread == nullptr)
+    if(currentThread == nullptr)
         return threads.at(0);
 
-    if(current_thread->status == THREAD_FINISHED) {
+    if(currentThread->status == THREAD_FINISHED) {
         if(threads.size() == 1) {
             threads.clear();
         } else {
-            auto currentThreadIt = std::find(threads.begin(), threads.end(), current_thread);
+            auto currentThreadIt = std::find(threads.begin(), threads.end(), currentThread);
             delete *currentThreadIt;
             threads.erase(currentThreadIt);
         }
@@ -244,8 +244,8 @@ void FIFOScheduler::initialize(){
     }
 }
 
-Thread* FIFOScheduler::schedule(Thread* current_thread, std::vector<Thread*>& threads) {
-    auto newThread = ThreadScheduler::schedule(current_thread, threads);
+Thread* FIFOScheduler::schedule(Thread* currentThread, std::vector<Thread*>& threads) {
+    auto newThread = ThreadScheduler::schedule(currentThread, threads);
     if(newThread != nullptr)
         return newThread;
 
@@ -268,15 +268,15 @@ void RoundRobinScheduler::initialize() {
     }
 }
 
-Thread* RoundRobinScheduler::schedule(Thread* current_thread, std::vector<Thread*>& threads) {
-    auto newThread = ThreadScheduler::schedule(current_thread, threads);
+Thread* RoundRobinScheduler::schedule(Thread* currentThread, std::vector<Thread*>& threads) {
+    auto newThread = ThreadScheduler::schedule(currentThread, threads);
     if(newThread != nullptr)
         return newThread;
 
     if(threads.empty())
         return nullptr;
 
-    auto currentThreadIt = std::find(threads.begin(), threads.end(), current_thread);
+    auto currentThreadIt = std::find(threads.begin(), threads.end(), currentThread);
     if(currentThreadIt == threads.end())
         currentThreadIt = threads.begin();
 

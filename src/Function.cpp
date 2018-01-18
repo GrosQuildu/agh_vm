@@ -28,73 +28,73 @@ const std::string argTypeToStr(unsigned char c) {
 }
 
 
-dtt_arg FunctionFactory::parse_load(std::string line, int arg_table_size, std::map<std::string, int> &var_table) {
+dtt_arg FunctionFactory::parse_load(std::string line, int argTableSize, std::map<std::string, int> &varTable) {
     std::string bytecode;
-    std::string bytecode_arg;
-    dtt_arg dtt_arg_tmp = dtt_arg();
+    std::string bytecodeArg;
+    dtt_arg dttArgTmp = dtt_arg();
 
     if(line.find(" ") == line.npos)
         throw ParserException("Argument to LOAD bytecode required");
     bytecode = line.substr(0, line.find(" "));
-    bytecode_arg = line.substr(line.find(" ")+1);
+    bytecodeArg = line.substr(line.find(" ")+1);
 
     if(bytecode == "LOAD") {
-        if(startswith(bytecode_arg, "ARG_")) {
-            dtt_arg_tmp.type = ARG;
+        if(startswith(bytecodeArg, "ARG_")) {
+            dttArgTmp.type = ARG;
             try {
-                dtt_arg_tmp.valInt = std::stoi(bytecode_arg.substr(4));
+                dttArgTmp.valInt = std::stoi(bytecodeArg.substr(4));
             } catch(std::invalid_argument) {
-                throw ParserException("Invalid integer after ARG_: " + bytecode_arg);
+                throw ParserException("Invalid integer after ARG_: " + bytecodeArg);
             }
-            if(dtt_arg_tmp.valInt >= arg_table_size)
+            if(dttArgTmp.valInt >= argTableSize)
                 throw ParserException("Integer after ARG_ too large");
-            if(dtt_arg_tmp.valInt < 0)
+            if(dttArgTmp.valInt < 0)
                 throw ParserException("Integer after ARG_ too small");
         } else {
-            dtt_arg_tmp.type = CONST;
+            dttArgTmp.type = CONST;
             try {
-                dtt_arg_tmp.valInt = std::stoi(bytecode_arg);
+                dttArgTmp.valInt = std::stoi(bytecodeArg);
             } catch(std::invalid_argument) {
-                throw ParserException("Invalid const: " + bytecode_arg);
+                throw ParserException("Invalid const: " + bytecodeArg);
             }
         }
     } else if(bytecode == "LOADV") {
-        if(var_table.find(bytecode_arg) == var_table.end())
-            throw ParserException("Variable " + bytecode_arg + " not found");
-        dtt_arg_tmp.type = VAR;
-        dtt_arg_tmp.valStr = bytecode_arg;
+        if(varTable.find(bytecodeArg) == varTable.end())
+            throw ParserException("Variable " + bytecodeArg + " not found");
+        dttArgTmp.type = VAR;
+        dttArgTmp.valStr = bytecodeArg;
     } else if(bytecode == "LOADF") {
-        dtt_arg_tmp.type = FUNC;
-        dtt_arg_tmp.valStr = bytecode_arg;
+        dttArgTmp.type = FUNC;
+        dttArgTmp.valStr = bytecodeArg;
     } else if(bytecode == "LOADT") {
-        dtt_arg_tmp.type = THREAD;
-        dtt_arg_tmp.valStr = bytecode_arg;
+        dttArgTmp.type = THREAD;
+        dttArgTmp.valStr = bytecodeArg;
     } else {
         throw ParserException("Wrong LOAD bytecode: " + bytecode);
     }
-    return dtt_arg_tmp;
+    return dttArgTmp;
 }
 
-std::pair<bool, int> FunctionFactory::check_instruction(std::string line, std::vector<dtt_arg> &dtt_args_vector, int arg_counter) {
-    std::vector<std::set<unsigned char>> &required_args = bytecodeMapping.at(line).second;
-    auto argToCheck = dtt_args_vector.end() - arg_counter;
+std::pair<bool, int> FunctionFactory::check_instruction(std::string line, std::vector<dtt_arg> &dttArgsVector, int argCounter) {
+    std::vector<std::set<unsigned char>> &requiredArgs = bytecodeMapping.at(line).second;
+    auto argToCheck = dttArgsVector.end() - argCounter;
     bool unknownNumberOfArguments = false;
     int argumentsChecked = 0;
 
-    for(auto required_arg_tuple = required_args.begin(); required_arg_tuple != required_args.end(); ++required_arg_tuple) {
+    for(auto requiredArgTuple = requiredArgs.begin(); requiredArgTuple != requiredArgs.end(); ++requiredArgTuple) {
         // empty set -> unknown (at parsing time) number of elements
-        if(required_arg_tuple->empty()) {
+        if(requiredArgTuple->empty()) {
             unknownNumberOfArguments = true;
             break;
         }
-        if(required_arg_tuple->find((*argToCheck).type) == required_arg_tuple->end()) {
-            std::string err_msg = "Wrong arguments (calls to LOADs) for " + line + "\n";
-            err_msg += "Required: " + vector2string(required_args) + "\n";
-            err_msg += "Found: [";
-            for (auto it = dtt_args_vector.end() - arg_counter; it != dtt_args_vector.end(); ++it)
-                err_msg += argTypeToStr((*it).type) + ", ";
-            err_msg += "]";
-            throw ParserException(err_msg);
+        if(requiredArgTuple->find((*argToCheck).type) == requiredArgTuple->end()) {
+            std::string errMsg = "Wrong arguments (calls to LOADs) for " + line + "\n";
+            errMsg += "Required: " + vector2string(requiredArgs) + "\n";
+            errMsg += "Found: [";
+            for (auto it = dttArgsVector.end() - argCounter; it != dttArgsVector.end(); ++it)
+                errMsg += argTypeToStr((*it).type) + ", ";
+            errMsg += "]";
+            throw ParserException(errMsg);
         }
         argToCheck++;
         argumentsChecked++;
@@ -112,7 +112,7 @@ std::pair<FunctionPrototype*, std::forward_list<std::tuple<std::string, int, int
 
     // begins with DEF FUNC_NAME ARGS_COUNT
     std::string name;
-    int arg_table_size = 0;
+    int argTableSize = 0;
 
     std::getline(codeFile, line);
     trim(line);
@@ -127,39 +127,38 @@ std::pair<FunctionPrototype*, std::forward_list<std::tuple<std::string, int, int
 
     if(line.size() > 0) {
         try {
-            arg_table_size = std::stoi(line);
+            argTableSize = std::stoi(line);
         } catch(std::invalid_argument) {
             throw ParserException("Incorrect ARGS_COUNT in DEF");
         }
-        if(arg_table_size < 0)
+        if(argTableSize < 0)
             throw ParserException("Negative ARGS_COUNT in DEF");
     }
 
     // DEFINE -  declarations of variables
-    std::map<std::string, int> var_table;
-    std::string var_name;
+    std::map<std::string, int> varTable;
+    std::string varName;
 
     while (std::getline(codeFile, line)) {
         trim(line);
         if(line.empty() || startswith(line, "//") || startswith(line, "#"))
             continue;
         if(startswith(line, "DECLARE ")) {
-            var_name = line.substr(8);
+            varName = line.substr(8);
             if(line.empty())
                 throw ParserException("VAR_NAME after DEFINE required");
-            var_table[var_name] = 0;
+            varTable[varName] = 0;
         } else
             break;
     }
 
     // bytecodes
     std::vector<dtt_func> *dtt = new std::vector<dtt_func>;
-    std::vector<dtt_arg> dtt_args_vector;
+    std::vector<dtt_arg> dttArgsVector;
     std::string bytecode;
-    std::string bytecode_arg;
 
     std::forward_list<std::tuple<std::string, int, int>> calledFunctionsToCheck;
-    int arg_counter = 0;
+    int argCounter = 0;
 
     do {
         trim(line);
@@ -167,9 +166,9 @@ std::pair<FunctionPrototype*, std::forward_list<std::tuple<std::string, int, int
             continue;
         // PARSE LOADS
         if(startswith(line, "LOAD")) {
-            dtt_arg dtt_arg_tmp = parse_load(line, arg_table_size, var_table);
-            dtt_args_vector.push_back(dtt_arg_tmp);
-            arg_counter++;
+            dtt_arg dttArgTmp = parse_load(line, argTableSize, varTable);
+            dttArgsVector.push_back(dttArgTmp);
+            argCounter++;
         // PARSE END
         } else if(line == "END") {
             endReached = true;
@@ -178,16 +177,16 @@ std::pair<FunctionPrototype*, std::forward_list<std::tuple<std::string, int, int
             throw ParserException("Variables definitions can appear only at the beginning og the function");
         // PARSE OTHERS
         } else if(bytecodeMapping.find(line) != bytecodeMapping.end()) {
-            auto instructionChecked = check_instruction(line, dtt_args_vector, arg_counter);
+            auto instructionChecked = check_instruction(line, dttArgsVector, argCounter);
             bool unknownNumberOfArguments = instructionChecked.first;
             int argumentsChecked = instructionChecked.second;
             if(unknownNumberOfArguments) {
-                std::string functionToCheckName = dtt_args_vector.at(dtt_args_vector.size() - arg_counter).valStr;
+                std::string functionToCheckName = dttArgsVector.at(dttArgsVector.size() - argCounter).valStr;
                 calledFunctionsToCheck.push_front(std::make_tuple(functionToCheckName,
-                                                                  dtt_args_vector.size() - arg_counter,
-                                                                  arg_counter - argumentsChecked));
+                                                                  dttArgsVector.size() - argCounter,
+                                                                  argCounter - argumentsChecked));
             }
-            arg_counter = 0;
+            argCounter = 0;
             dtt->push_back(bytecodeMapping.at(line).first);
         } else {
             throw ParserException("Unknown bytecode: " + line);
@@ -198,9 +197,9 @@ std::pair<FunctionPrototype*, std::forward_list<std::tuple<std::string, int, int
     if(!endReached)
         throw ParserException("END not fund");
 
-    std::forward_list<dtt_arg>* dtt_args = new std::forward_list<dtt_arg>(dtt_args_vector.begin(), dtt_args_vector.end());
+    std::forward_list<dtt_arg>* dttArgs = new std::forward_list<dtt_arg>(dttArgsVector.begin(), dttArgsVector.end());
 
-    return std::make_pair(new FunctionPrototype(name, dtt, dtt_args, arg_table_size, var_table), calledFunctionsToCheck);
+    return std::make_pair(new FunctionPrototype(name, dtt, dttArgs, argTableSize, varTable), calledFunctionsToCheck);
 }
 
 FunctionFactory::FunctionFactory(std::string codeDirPath) {
@@ -272,13 +271,13 @@ void FunctionFactory::setSchedulingFrequency(unsigned long frequency) {
 
 
 FunctionPrototype::FunctionPrototype(std::string name, std::vector<dtt_func>* dtt,
-                                     std::forward_list<dtt_arg>* dtt_args, int arg_table_size,
-                                     std::map<std::string,int>var_table) {
+                                     std::forward_list<dtt_arg>* dttArgs, int argTableSize,
+                                     std::map<std::string,int>varTable) {
     this->name = name;
     this->dtt = dtt;
-    this->dttArgs = dtt_args;
-    this->argTableSize = arg_table_size;
-    this->varTable = var_table;
+    this->dttArgs = dttArgs;
+    this->argTableSize = argTableSize;
+    this->varTable = varTable;
     this->jit = new std::map<unsigned long, jit_func>;
 }
 
@@ -530,9 +529,9 @@ public:
     void receive(int);
 
     std::string name;
-    Function* currect_function;
+    Function* currentFunction;
     unsigned char status;
-    std::vector<int> recv_table;
+    std::vector<int> recvTable;
     std::vector<Thread*> joiningThreads;
     bool reshedule;
 };
@@ -571,7 +570,7 @@ public:
     int val0, val1, val2;
     Thread *thread;
     Function *function;
-    std::vector<int> *recv_table;
+    std::vector<int> *recvTable;
     std::vector<int> newFunctionArgs;
     )END";
     return prolog;
@@ -634,7 +633,7 @@ std::string vm_call(){
     function->setArguments(functionArgs);
     function->returnFunction = currentFunction;
 
-    vm.getCurrentThread()->currect_function = function;
+    vm.getCurrentThread()->currentFunction = function;
     currentFunction->vpc++;
     return;
     )END";
@@ -652,7 +651,7 @@ std::string vm_return(){
         currentFunction->returnFunction->varTable[currentFunction->returnFunction->returnVariable] = val0;
         currentFunction->returnFunction->anotherFunctionCalled = false;
     }
-    vm.getCurrentThread()->currect_function = currentFunction->returnFunction;
+    vm.getCurrentThread()->currentFunction = currentFunction->returnFunction;
     delete currentFunction;
     )END";
 };
@@ -678,13 +677,13 @@ std::string vm_recv(){
     // vm_recv
     arg0 = currentFunction->getNextArg(false);
 
-    recv_table = &vm.getCurrentThread()->recv_table;
-    if(recv_table->size() != 0) {
+    recvTable = &vm.getCurrentThread()->recvTable;
+    if(recvTable->size() != 0) {
         currentFunction->vpc++;
         currentFunction->getNextArg();
 
-        currentFunction->varTable.at(arg0.valStr) = recv_table->back();
-        recv_table->pop_back();
+        currentFunction->varTable.at(arg0.valStr) = recvTable->back();
+        recvTable->pop_back();
 
         currentFunction->waiting = false;
     } else {
@@ -702,7 +701,7 @@ std::string vm_start(){
 
     thread = vm.getNewThread(arg1.valStr, arg0.valStr);
 
-    for (int i = 0; i < thread->currect_function->argTableSize; ++i) {
+    for (int i = 0; i < thread->currentFunction->argTableSize; ++i) {
         arg2 = currentFunction->getNextArg();
         val2 = arg2.valInt;
         if(arg2.type == VAR)
@@ -710,7 +709,7 @@ std::string vm_start(){
         newFunctionArgs.push_back(val2);
     }
 
-    thread->currect_function->setArguments(newFunctionArgs);
+    thread->currentFunction->setArguments(newFunctionArgs);
     newFunctionArgs.clear();
     currentFunction->vpc++;
     )END";

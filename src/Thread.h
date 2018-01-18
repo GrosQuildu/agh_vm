@@ -31,9 +31,9 @@ public:
     void receive(int);
 
     std::string name;
-    Function* currect_function;
+    Function* currentFunction;
     unsigned char status;
-    std::vector<int> recv_table;
+    std::vector<int> recvTable;
     std::vector<Thread*> joiningThreads;
 
     #if DEBUG == 1
@@ -50,7 +50,7 @@ public:
      * @return unsigned long - next thread to run
      */
     virtual void initialize() = 0;
-    virtual Thread* schedule(Thread* current_thread, std::vector<Thread*>& threads);
+    virtual Thread* schedule(Thread*, std::vector<Thread*>&);
     virtual std::string getName();
     virtual ~ThreadScheduler() {};
 
@@ -66,14 +66,14 @@ class FIFOScheduler : public ThreadScheduler {
 public:
     FIFOScheduler();
     void initialize();
-    Thread* schedule(Thread* current_thread, std::vector<Thread*>& threads);
+    Thread* schedule(Thread*, std::vector<Thread*>&);
 };
 
 class RoundRobinScheduler : public ThreadScheduler {
 public:
     RoundRobinScheduler();
     void initialize();
-    Thread* schedule(Thread* current_thread, std::vector<Thread*>& threads);
+    Thread* schedule(Thread*, std::vector<Thread*>&);
 };
 
 
@@ -101,7 +101,7 @@ public:
 
 private:
     std::vector<Thread*> threads;
-    Thread* current_thread;
+    Thread* currentThread;
     ThreadScheduler* scheduler;
 };
 
