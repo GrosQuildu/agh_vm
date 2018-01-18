@@ -104,7 +104,7 @@ public:
 
     void run();
     jit_func compile();
-    dtt_arg& getNextArg(bool = true);
+    dtt_arg getNextArg(bool = true);
     void setArguments(std::vector<int>);
     std::vector<std::string> toStr() const;
     friend std::ostream& operator<<(std::ostream&, const Function&);
