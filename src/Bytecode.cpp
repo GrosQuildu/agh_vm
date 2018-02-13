@@ -93,7 +93,7 @@ public:
     unsigned int priority;
 
     #if DEBUG == 1
-    void refresh(WINDOW*);
+    void refresh(WINDOW*, bool);
     bool currentColor;
     #endif
 };

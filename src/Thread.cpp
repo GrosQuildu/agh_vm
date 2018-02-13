@@ -26,9 +26,6 @@ Thread::Thread(std::string name, Function *currectFunction) {
     this->currentFunction = currectFunction;
     this->status = THREAD_READY;
     this->priority = 5;
-    #if DEBUG == 1
-    this->currentColor = false;
-    #endif
 }
 
 Thread::~Thread() {
@@ -77,7 +74,7 @@ void Thread::receive(int value) {
 }
 
 #if DEBUG == 1
-void Thread::refresh(WINDOW *window) {
+void Thread::refresh(WINDOW *window, bool isCurrent) {
     wclear(window);
     box(window, 0 , 0);
 
@@ -88,7 +85,7 @@ void Thread::refresh(WINDOW *window) {
     int maxRecvDisplay = (int)(threadWinHeight * 0.25);
 
     // add name and code
-    if(currentColor)
+    if(isCurrent)
         wattron(window, COLOR_PAIR(3));
     else
         wattron(window, COLOR_PAIR(5));
@@ -98,15 +95,13 @@ void Thread::refresh(WINDOW *window) {
     for(int i = 0; i < maxCodeLinesDisplay && yPos - 1 < lines.size(); yPos++, i++)
         mvwaddstr(window, yPos, 1, lines.at((unsigned long)yPos-1).c_str());
 
-    if(currentColor)
-        wattron(window, COLOR_PAIR(3));
-    else
-        wattron(window, COLOR_PAIR(5));
-    currentColor = !currentColor;
-
     // add code
-    mvwaddstr(window, 1, (int)lines.at(0).size() + 2,
-              (std::string("[" + this->name) + " | " + std::to_string(this->priority) + "]").c_str());
+    if(isCurrent)
+        mvwaddstr(window, 1, (int)lines.at(0).size() + 2,
+              (std::string("[" + this->name) + " | " + std::to_string(this->priority) + "] *").c_str());
+    else
+        mvwaddstr(window, 1, (int)lines.at(0).size() + 2,
+                  (std::string("[" + this->name) + " | " + std::to_string(this->priority) + "]").c_str());
 
     // add vpc
     int headerSize = 3;
@@ -235,8 +230,12 @@ void ThreadManager::checkAllThreadsWaiting() {
 #if DEBUG == 1
 void ThreadManager::refreshThreads(std::vector<WINDOW*> windows, unsigned int startThread) {
     unsigned int i = 0;
+    bool isCurrent;
     for(; i < windows.size() && i + startThread < this->threads.size(); i++){
-        this->threads.at((unsigned long)i + startThread)->refresh(windows.at((unsigned long)i));
+        isCurrent = false;
+        if(this->currentThread == this->threads.at((unsigned long)i + startThread))
+            isCurrent = true;
+        this->threads.at((unsigned long)i + startThread)->refresh(windows.at((unsigned long)i), isCurrent);
     }
     for(; i < windows.size(); i++) {
         wclear(windows.at((unsigned long)i));

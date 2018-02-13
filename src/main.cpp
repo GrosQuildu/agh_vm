@@ -44,4 +44,5 @@ int main(int argc, char *argv[]) {
     cout<<"Start\n";
     VM::getVM().initialize(codeDir, blocksDir, defaultScheduler, rebuild);
     VM::getVM().start();
+    VM::getVM().stop();
 }

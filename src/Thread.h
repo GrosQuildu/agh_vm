@@ -38,8 +38,7 @@ public:
     unsigned int priority;
 
     #if DEBUG == 1
-    void refresh(WINDOW*);
-    bool currentColor;
+    void refresh(WINDOW*, bool);
     #endif
 };
 

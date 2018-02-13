@@ -99,6 +99,7 @@ void VM::stop() {
     this->functionFactory = nullptr;
     this->threadManager = nullptr;
     this->threadSchedulers = nullptr;
+    endwin();
     std::cout<<"Virtual Machines stopped\n";
 }
 
