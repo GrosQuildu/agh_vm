@@ -119,8 +119,8 @@ Function* VM::getNewFunction(std::string functionName) {
 }
 
 Thread* VM::getNewThread(std::string threadName, std::string functionName) {
-    auto mainFunction = VM::functionFactory->makeFunction(functionName);
-    return VM::threadManager->addThread(threadName, mainFunction);
+    auto newFunction = VM::functionFactory->makeFunction(functionName);
+    return VM::threadManager->addThread(threadName, newFunction);
 }
 
 void VM::stopThread(std::string threadName) {
