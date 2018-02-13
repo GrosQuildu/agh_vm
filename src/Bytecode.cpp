@@ -311,6 +311,7 @@ std::string vm_priority(){
     thread = vm.getThread(arg0.valStr);
     if(thread != nullptr && arg1.valInt >= 1 && arg1.valInt <= 10)
         thread->priority = arg1.valInt;
+    currentFunction->vpc++;
     )END";
 };
 

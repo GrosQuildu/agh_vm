@@ -91,15 +91,15 @@ void VM::start() {
 
 void VM::stop() {
     VM::threadManager->clearAll();
-    for(auto it = VM::threadSchedulers->begin(); it != VM::threadSchedulers->end(); it++)
-        delete *it;
     delete this->functionFactory;
     delete this->threadManager;
     delete this->threadSchedulers;
     this->functionFactory = nullptr;
     this->threadManager = nullptr;
     this->threadSchedulers = nullptr;
+    #if DEBUG == 1
     endwin();
+    #endif
     std::cout<<"Virtual Machines stopped\n";
 }
 
@@ -153,7 +153,7 @@ void VM::print(std::string value) {
 
     mvwaddstr(VM::terminal, 3, 1, value.c_str());
     wrefresh(VM::terminal);
-    usleep(5 * 100000);
+//    usleep(4 * 100000);
     #else
     std::cout<<value<<std::endl;
     #endif

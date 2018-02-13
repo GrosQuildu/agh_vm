@@ -283,7 +283,6 @@ FunctionPrototype::FunctionPrototype(std::string name, std::vector<dtt_func>* dt
 
 FunctionPrototype::~FunctionPrototype() {
     delete this->dtt;
-    delete this->dttArgs;
     delete this->jit;
     this->dtt = nullptr;
     this->dttArgs = nullptr;
@@ -342,7 +341,7 @@ jit_func Function::compile() {
 
         // prepare blocks as string with cpp code to compile
         std::array<dtt_func, 3> blockingBytecodes = {vm_join, vm_recv};  // must be at the beginning of the block
-        std::array<dtt_func, 1> changingContextBytecodes = {vm_call};  // must be at the end of the block
+        std::array<dtt_func, 2> changingContextBytecodes = {vm_call, vm_priority};  // must be at the end of the block
 
         unsigned long blockCounter = 0;
         std::string blocks = vm_prolog(blockName);
