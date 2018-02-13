@@ -23,7 +23,9 @@ cmake -D BUILD_ARM=$BUILD_SWITCH ..
 make
 
 if [ $BUILD_SWITCH == "ON" ]; then
-  echo "Now run: qemu-arm -L /usr/arm-linux-gnueabi/ ./VM"
+  echo "Now run: qemu-arm -L /usr/arm-linux-gnueabi/ ./VM --help"
+  echo "Or: qemu-arm -L /usr/arm-linux-gnueabi/ ./VM example_programs/test_schedulers/ blocks/ FIFO true"
 else
-  echo "Now run: ./VM"
+  echo "Now run: ./VM --help"
+  echo "Or: ./VM example_programs/test_schedulers/ blocks/ FIFO true"
 fi
