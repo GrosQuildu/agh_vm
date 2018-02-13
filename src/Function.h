@@ -68,7 +68,7 @@ class FunctionPrototype {
 public:
     FunctionPrototype(std::string, std::vector<dtt_func>*, std::forward_list<dtt_arg>*, int, std::map<std::string, int>);
     ~FunctionPrototype();
-    Function* generate();
+    Function* generate();  // prototype
 
     std::string name;
     std::vector<dtt_func> *dtt;
@@ -143,7 +143,7 @@ public:
      * @param string functionName
      * @return Function*
      */
-    Function* makeFunction(std::string);  // factory method
+    Function* makeFunction(std::string);  // factory
 
     void setSchedulingFrequency(unsigned long);
 

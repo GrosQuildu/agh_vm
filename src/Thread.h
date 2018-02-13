@@ -23,10 +23,10 @@ const std::string threadStatusToStr(char);
 class Thread {
 public:
     Thread(std::string, Function*);
-    ~Thread();
+    ~Thread();  // observer (notify on destroy)
     void run();
 
-    void joining(Thread*);
+    void joining(Thread*);  // observer (register)
     void unblock();
     void receive(int);
 
@@ -44,6 +44,7 @@ public:
 };
 
 
+// strategy
 class ThreadScheduler {
 public:
     /**
