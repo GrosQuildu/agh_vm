@@ -400,7 +400,7 @@ jit_func Function::compile() {
     const char *dlsym_error = dlerror();
     if (dlsym_error) {
         dlclose(handle);
-        throw VMRuntimeException(std::string("Cannot load symbol 'hello': ") + dlsym_error);
+        throw VMRuntimeException(std::string("Cannot load symbol " + blockName + ": ") + dlsym_error);
     }
 
     dlclose(handle);
