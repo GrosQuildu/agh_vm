@@ -126,4 +126,36 @@ PRIORITY
 Examples in `example_programs` directory
 
 
+### Scheduler
+
+Machine support three types of scheduling: first-in first-out, round-robin and priority based. Scheduler can be selected in VM command line arguments.
+
+FIFO scheduler works as expected: main thread is executed, then next threads in order they were started. Blocking operations (recv, join) may force thread change.
+
+Round robin executes few bytecodes from each thread, then move to next thread. Number of bytecodes is set by scheduler class in initialize method in Thread.cpp file.
+
+Priority scheduler execute thread with the highest priority, if more than one thread have the same priority, they are scheduled in round-robin style.
+
+
+### JIT
+
+Machine had to works as >very simple< just-in-time compiler (or inline-threading as some call it). So each function is divided into blocks (size depends on which scheduler is used), each block is compiled by external compiler (gcc), loaded as shared library and called when needed. Blocks (c++ code as shared library file) are stored in folder specified in command line argument.
+
+
+### Patterns
+
+It was required to use at least three design patterns in the project. Comments in source code points to methods that implements a pattern.
+
+* Observer
+  + Used when joining thread (thread that want to wait register himself in target thread, when that thread ends, it notify each of registered threads)
+  + Observers and observable classes are the same: Thread
+* Singleton
+  + VM class is used to start and clear after execution of bytecode. It also works as interface for bytecode for some instructions (like starting new thread). It's impemented as singleton.
+  + Class: VM
+* Prototype
+  + Functions specified in ".pp" files can be reused (f.e. call the same funtion few times) and some of the variables (like consts and bytecode table) are constants and some vary (like function's arguments), so prototype pattern was used to simplify creation of new functions.
+  + Classes: FunctionPrototype, FunctionFactory, Function.
+* Strategy
+  + Pseudo (lacks wrapper class) strategy pattern was used to implement different schedulers
+  + Classes: ThreadScheduler, FIFOScheduler, RoundRobinScheduler, PriorityScheduler
 
