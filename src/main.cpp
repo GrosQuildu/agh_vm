@@ -39,7 +39,9 @@ int main(int argc, char *argv[]) {
     auto codeDir =  string(argv[1]) + "/";
     auto blocksDir = string(argv[2]) + "/";
     auto defaultScheduler = argv[3];
-    auto rebuild = bool(argv[4]);
+    auto rebuild = false;
+    if(string(argv[4]) == "true")
+        rebuild = true;
 
     cout<<"Start\n";
     VM::getVM().initialize(codeDir, blocksDir, defaultScheduler, rebuild);
