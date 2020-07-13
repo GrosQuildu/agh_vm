@@ -1,6 +1,6 @@
 ## Virtual Machine
 
-Project for AGH subject design patterns.
+A virtual machine developed during a Design Patterns course on AGH UST.
 
 ### Build and run:
 
